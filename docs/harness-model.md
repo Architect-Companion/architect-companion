@@ -6,27 +6,30 @@ See [Glossary](glossary.md) for shared terminology.
 
 Architect Companion should be agent-neutral at its core.
 
-The repository-specific harness lives in `.architect-companion/`. That directory is the canonical, tool-independent source of truth for architecture guidance, workflows, policies, and checks.
+The repository-specific harness instance lives in `.architect-companion/`. Reusable architectural knowledge lives in `profiles/`. Together, those inputs produce the effective harness model that renderers and checks consume.
 
-Architect Companion then renders that source model into target-specific integrations such as `AGENTS.md`, `CLAUDE.md`, Cursor rules, Copilot instructions, Codex hooks, Claude Code commands, MCP prompts, and CI workflows.
+Architect Companion then renders the effective harness model into target-specific integrations such as `AGENTS.md`, `CLAUDE.md`, Cursor rules, Copilot instructions, Codex hooks, Claude Code commands, MCP prompts, and CI workflows.
 
 In short:
 
 ```text
-.architect-companion/        canonical harness source
-        |
-        v
-architect-companion render   compiler / renderer
-        |
-        v
-agent and platform targets   generated adapters
+profiles/ + .architect-companion/   harness inputs
+              |
+              v
+effective harness model             resolved source model
+              |
+              v
+architect-companion render          compiler / renderer
+              |
+              v
+agent and platform targets          generated adapters
 ```
 
 The harness owns the architecture model. Individual agents are execution surfaces.
 
 ## Why This Matters
 
-Customers may use different coding agents across teams or projects. Some may use Codex, some Cursor, some Claude Code, and some GitHub Copilot. The harness should not require a team to standardize on a single agent.
+Teams may use different coding agents across projects. Some may use Codex, some Cursor, some Claude Code, and some GitHub Copilot. The harness should not require a team to standardize on a single agent.
 
 The stable product concept is therefore:
 
@@ -96,7 +99,7 @@ CLAUDE.md
 
 Generated files should be treated as adapters. They should contain only what the target tool needs in the shape that tool understands.
 
-The source of truth remains `.architect-companion/`.
+The source model remains the effective harness model produced from `profiles/` and `.architect-companion/`.
 
 Rendering should be deterministic and should not use AI. See [Rendering And Checks](rendering-and-checks.md) for the compiler, renderer, CI, and check model.
 
@@ -116,7 +119,7 @@ architect-companion explain
 Possible meanings:
 
 - `init`: create `.architect-companion/` from a selected profile.
-- `render`: generate target-specific files from `.architect-companion/`.
+- `render`: generate target-specific files from the effective harness model.
 - `check`: run deterministic architecture and policy checks.
 - `review`: review a diff against the harness model.
 - `doctor`: show active targets, missing files, stale generated outputs, and unsupported integrations.

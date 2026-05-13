@@ -171,5 +171,4 @@ The product is useful because it ships with strong defaults:
 - exception handling
 - target renderers
 
-The core asset is not the generated files. The core asset is the architectural knowledge behind them.
-
+The main source of usefulness is not the generated files. It is the architectural knowledge behind them.

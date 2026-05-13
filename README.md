@@ -20,12 +20,14 @@ This repository is in the product-definition stage. The current focus is to defi
 
 - [AGENTS.md](AGENTS.md): guidance for AI agents working in this repository
 - [docs/README.md](docs/README.md): documentation overview and reading guide
+- [docs/roadmap.md](docs/roadmap.md): iterative implementation roadmap
 - [docs/product-thesis.md](docs/product-thesis.md): product thesis and design rationale
 - [docs/harness-model.md](docs/harness-model.md): tool-independent harness model and target rendering approach
 - [docs/architecture-knowledge.md](docs/architecture-knowledge.md): where architectural knowledge is encoded
 - [docs/profile-model.md](docs/profile-model.md): how reusable architecture profiles are structured
 - [docs/rendering-and-checks.md](docs/rendering-and-checks.md): deterministic rendering, CI adapters, and check orchestration
 - [docs/glossary.md](docs/glossary.md): shared terminology for the project
+- [docs/decisions](docs/decisions): accepted architecture and product decisions
 - [profiles/modular-monolith](profiles/modular-monolith): initial placeholder for the modular monolith profile
 
 See [docs/product-thesis.md](docs/product-thesis.md) for the current thinking.

@@ -21,7 +21,7 @@ The harness should package opinionated defaults across several layers:
 - CI integration for pull request review and enforcement
 - adapter layers for MCP, hooks, skills, slash commands, and plugins
 
-The canonical source of truth should be a tool-independent harness model, not an agent-specific configuration file. See [Harness Model](harness-model.md) for the current source/target design.
+The canonical source should be a tool-independent harness model, not an agent-specific configuration file. See [Harness Model](harness-model.md) for the current source/target design.
 
 Architectural knowledge should be encoded in reusable profiles, policies, workflows, review heuristics, examples, and target renderers. See [Architecture Knowledge](architecture-knowledge.md) for the current model.
 
@@ -70,9 +70,9 @@ It should not contain:
 
 An initial MVP could provide:
 
-- `arch-harness init`
-- `arch-harness check`
-- `arch-harness review`
+- `architect-companion init`
+- `architect-companion check`
+- `architect-companion review`
 - generated `AGENTS.md`, `CLAUDE.md`, Cursor rules, and Copilot instructions
 - a small architecture metadata model
 - a few useful policy checks, such as forbidden dependencies or module boundary violations
