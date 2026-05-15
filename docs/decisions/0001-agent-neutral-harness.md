@@ -35,4 +35,3 @@ Targets may include `AGENTS.md`, `CLAUDE.md`, Cursor rules, Copilot instructions
 - Renderers must express target mechanics, not architectural intent.
 - Some targets will support fewer capabilities than others.
 - The project needs a renderer capability model before broad target support.
-

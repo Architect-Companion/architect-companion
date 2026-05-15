@@ -14,4 +14,3 @@ It should eventually define:
 - how temporary boundary exceptions are documented
 
 This directory is currently a placeholder for the reusable profile pack. The detailed schema is still being defined in [docs/profile-model.md](../../docs/profile-model.md).
-

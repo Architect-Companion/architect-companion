@@ -39,4 +39,3 @@ generated target files
 - Generated files should contain headers indicating their source.
 - `render --check` should fail when generated files are stale.
 - AI-assisted review belongs outside the deterministic render path.
-

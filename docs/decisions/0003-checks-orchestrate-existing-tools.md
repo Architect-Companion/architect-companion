@@ -38,4 +38,3 @@ It should directly implement only harness-specific checks, such as:
 - Platform renderers can stay thin.
 - CI adapters should invoke configured engines or `architect-companion check`.
 - Check output should normalize policy id, severity, location, message, and source engine.
-

@@ -16,6 +16,19 @@ It provides reusable instructions, workflows, architecture metadata, and checks 
 
 This repository is in the product-definition stage. The current focus is to define the harness model, document the architectural defaults, and shape the first usable CLI and template set.
 
+## Development
+
+Architect Companion uses Node.js 22.13 or newer and npm.
+
+```bash
+npm ci
+npm run check
+npm run build
+node dist/cli.js --help
+```
+
+The iteration-zero CLI exposes `architect-companion --help` and `architect-companion --version`.
+
 ## Repository Contents
 
 - [AGENTS.md](AGENTS.md): guidance for AI agents working in this repository
