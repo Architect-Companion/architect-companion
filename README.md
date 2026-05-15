@@ -28,6 +28,7 @@ node dist/cli.js --help
 ```
 
 The iteration-zero CLI exposes `architect-companion --help` and `architect-companion --version`.
+The iteration-one CLI also exposes `architect-companion inspect effective-model` for validating harness inputs and printing the resolved model.
 
 ## Repository Contents
 

@@ -11,6 +11,7 @@ Read the documents that match the task at hand:
 - [Product Thesis](product-thesis.md): product framing, scope, and non-goals.
 - [Roadmap](roadmap.md): iterative implementation plan and MVP scope.
 - [Harness Model](harness-model.md): canonical harness, generated targets, and agent-neutral source/target design.
+- [Effective Harness Model](effective-harness-model.md): iteration-one schemas, merge rules, validation rules, and inspect command.
 - [Profile Model](profile-model.md): reusable architecture profiles and project-specific harness instances.
 - [Architecture Knowledge](architecture-knowledge.md): where architectural knowledge is encoded.
 - [Rendering And Checks](rendering-and-checks.md): deterministic rendering, CI adapters, check orchestration, and the boundary between checks and AI-assisted review.
@@ -28,20 +29,23 @@ For product or positioning changes, read:
 For harness or target-generation changes, read:
 
 1. [Harness Model](harness-model.md)
-2. [Rendering And Checks](rendering-and-checks.md)
-3. [Glossary](glossary.md)
+2. [Effective Harness Model](effective-harness-model.md)
+3. [Rendering And Checks](rendering-and-checks.md)
+4. [Glossary](glossary.md)
 
 For profile or architectural-knowledge changes, read:
 
 1. [Profile Model](profile-model.md)
-2. [Architecture Knowledge](architecture-knowledge.md)
-3. [Rendering And Checks](rendering-and-checks.md)
+2. [Effective Harness Model](effective-harness-model.md)
+3. [Architecture Knowledge](architecture-knowledge.md)
+4. [Rendering And Checks](rendering-and-checks.md)
 
 For CLI, checks, CI, or tool-integration changes, read:
 
 1. [Roadmap](roadmap.md)
-2. [Rendering And Checks](rendering-and-checks.md)
-3. [Harness Model](harness-model.md)
+2. [Effective Harness Model](effective-harness-model.md)
+3. [Rendering And Checks](rendering-and-checks.md)
+4. [Harness Model](harness-model.md)
 
 For decisions that should remain stable across future discussions, read:
 

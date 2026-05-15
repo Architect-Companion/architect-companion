@@ -1,0 +1,11 @@
+schemaVersion: 1
+modules:
+  - name: identity
+    path: src/modules/identity
+    public_api: src/modules/identity/index.ts
+  - name: billing
+    path: src/modules/billing
+    public_api: src/modules/billing/index.ts
+allowed_dependencies:
+  billing:
+    - identity

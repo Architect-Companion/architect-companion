@@ -1,0 +1,14 @@
+schemaVersion: 1
+profile:
+  name: modular-monolith
+  version: 0.1.0
+  title: Modular Monolith
+  summary: Opinionated guidance for TypeScript modular monoliths.
+defaults:
+  stack: typescript
+  targets:
+    agentsMd: true
+    cursor: true
+    dependencyCruiser: true
+    githubActions: true
+policies: []

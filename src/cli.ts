@@ -4,14 +4,25 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  HarnessConfigError,
+  loadEffectiveHarnessModel,
+  serializeEffectiveHarnessModel,
+} from "./model/effective-model.js";
+
 export const HELP_TEXT = `Architect Companion
 
 Usage:
   architect-companion [options]
+  architect-companion inspect effective-model [--project <dir>] [--profiles <dir>]
 
 Options:
-  -h, --help       Show this help message.
-  -v, --version    Show the Architect Companion version.
+  -h, --help          Show this help message.
+  -v, --version       Show the Architect Companion version.
+
+Commands:
+  inspect effective-model
+      Validate the harness inputs and print the resolved effective model as JSON.
 `;
 
 type Writable = {
@@ -24,13 +35,30 @@ type CliIo = {
 };
 
 type CliOptions = {
+  cwd?: string;
+  profilesDir: string;
   version: string;
 };
 
 const helpFlags = new Set(["-h", "--help"]);
 const versionFlags = new Set(["-v", "--version"]);
 
-export function runCli(args: string[], io: CliIo, options: CliOptions): number {
+type InspectOptions = {
+  profilesDir: string;
+  projectDir: string;
+};
+
+type InspectOptionsResult =
+  | {
+      options: InspectOptions;
+      success: true;
+    }
+  | {
+      message: string;
+      success: false;
+    };
+
+export async function runCli(args: string[], io: CliIo, options: CliOptions): Promise<number> {
   const firstArg = args[0];
 
   if (
@@ -44,6 +72,10 @@ export function runCli(args: string[], io: CliIo, options: CliOptions): number {
   if (args.length === 1 && firstArg !== undefined && versionFlags.has(firstArg)) {
     io.stdout.write(`${options.version}\n`);
     return 0;
+  }
+
+  if (firstArg === "inspect") {
+    return runInspectCommand(args.slice(1), io, options);
   }
 
   io.stderr.write(`Unknown argument: ${firstArg ?? ""}\n`);
@@ -66,7 +98,11 @@ export async function readPackageVersion(baseUrl = import.meta.url): Promise<str
 
 export async function main(argv = process.argv, io: CliIo = process): Promise<number> {
   const version = await readPackageVersion();
-  return runCli(argv.slice(2), io, { version });
+  return runCli(argv.slice(2), io, {
+    cwd: process.cwd(),
+    profilesDir: defaultProfilesDir(),
+    version,
+  });
 }
 
 export function isDirectRun(metaUrl: string, argvEntry = process.argv[1]): boolean {
@@ -86,4 +122,109 @@ if (isDirectRun(import.meta.url)) {
       process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
       process.exitCode = 1;
     });
+}
+
+async function runInspectCommand(args: string[], io: CliIo, options: CliOptions): Promise<number> {
+  const target = args[0];
+
+  if (target !== "effective-model") {
+    io.stderr.write(`Unknown inspect target: ${target ?? ""}\n`);
+    io.stderr.write("Run `architect-companion --help` for usage.\n");
+    return 1;
+  }
+
+  const parsedOptions = parseInspectOptions(args.slice(1), options);
+  if (!parsedOptions.success) {
+    io.stderr.write(`${parsedOptions.message}\n`);
+    io.stderr.write("Run `architect-companion --help` for usage.\n");
+    return 1;
+  }
+
+  try {
+    const model = await loadEffectiveHarnessModel(parsedOptions.options);
+    io.stdout.write(serializeEffectiveHarnessModel(model));
+    return 0;
+  } catch (error: unknown) {
+    if (error instanceof HarnessConfigError) {
+      io.stderr.write(`${error.message}\n`);
+      return 1;
+    }
+
+    throw error;
+  }
+}
+
+function parseInspectOptions(args: string[], options: CliOptions): InspectOptionsResult {
+  const cwd = options.cwd ?? process.cwd();
+  let projectDir = cwd;
+  let profilesDir = options.profilesDir;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const flag = args[index];
+    const value = args[index + 1];
+
+    if (flag === "--project") {
+      const optionValue = parseDirectoryOptionValue("--project", value);
+      if (!optionValue.success) {
+        return optionValue;
+      }
+
+      projectDir = resolve(cwd, optionValue.value);
+      index += 1;
+      continue;
+    }
+
+    if (flag === "--profiles") {
+      const optionValue = parseDirectoryOptionValue("--profiles", value);
+      if (!optionValue.success) {
+        return optionValue;
+      }
+
+      profilesDir = resolve(cwd, optionValue.value);
+      index += 1;
+      continue;
+    }
+
+    return {
+      message: `Unknown argument: ${flag ?? ""}`,
+      success: false,
+    };
+  }
+
+  return {
+    options: {
+      profilesDir,
+      projectDir,
+    },
+    success: true,
+  };
+}
+
+function parseDirectoryOptionValue(
+  flag: string,
+  value: string | undefined,
+):
+  | {
+      success: true;
+      value: string;
+    }
+  | {
+      message: string;
+      success: false;
+    } {
+  if (value === undefined || value.trim() === "" || value.startsWith("--")) {
+    return {
+      message: `${flag} requires a directory.`,
+      success: false,
+    };
+  }
+
+  return {
+    success: true,
+    value,
+  };
+}
+
+function defaultProfilesDir(): string {
+  return fileURLToPath(new URL("../profiles", import.meta.url));
 }
