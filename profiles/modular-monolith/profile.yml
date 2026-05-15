@@ -11,4 +11,52 @@ defaults:
     cursor: true
     dependencyCruiser: true
     githubActions: true
-policies: []
+principles:
+  - id: module-ownership
+    title: Modules own behavior behind public APIs
+    guidance: >-
+      Treat each module as the owner of its business behavior, data access, and
+      invariants. Other modules should depend on the module's public API instead
+      of reaching into its internal files.
+policies:
+  - id: module-boundaries
+    title: Module boundaries
+    intent: Modules may import another module only through its public API.
+    severity: error
+    guidance: >-
+      Cross-module imports should target the public_api path declared for the
+      dependency module. Imports from another module's internal files are boundary
+      violations unless the dependency is redesigned or a documented exception is
+      introduced.
+    implementation:
+      typescript:
+        engine: dependency-cruiser
+        renderer: dependency-cruiser-config
+workflows:
+  - id: change-module-boundary
+    title: Change a module boundary
+    steps:
+      - Identify the modules affected by the proposed boundary change.
+      - Decide whether the change belongs in a public API or inside one module.
+      - Update the public API before changing consumers.
+      - Remove cross-module internal imports introduced during the change.
+      - Run the architecture boundary check once rendering and checks are available.
+heuristics:
+  - id: architecture-review
+    title: Architecture review
+    questions:
+      - Does the change introduce a new dependency between modules?
+      - Does every cross-module call use the target module's public API?
+      - Is shared behavior placed in a stable module instead of duplicated through internal imports?
+      - Would a future module extraction be harder after this change?
+examples:
+  - id: module-access
+    title: Module access
+    good: |-
+      import { findCustomer } from "../identity";
+
+      const customer = await findCustomer(customerId);
+    bad: |-
+      import { loadCustomerRow } from "../identity/internal/customer-repository";
+
+      const customer = await loadCustomerRow(customerId);

@@ -5,16 +5,23 @@ import { parseDocument } from "yaml";
 const knownTargetKeys = ["agentsMd", "cursor", "dependencyCruiser", "githubActions"] as const;
 const supportedStacks = ["typescript"] as const;
 const supportedPolicySeverities = ["advisory", "warning", "error"] as const;
+const supportedPolicyEngines = ["dependency-cruiser"] as const;
+const supportedPolicyRenderers = ["dependency-cruiser-config"] as const;
 
 type KnownTargetKey = (typeof knownTargetKeys)[number];
 type SupportedStack = (typeof supportedStacks)[number];
 type PolicySeverity = (typeof supportedPolicySeverities)[number];
+type PolicyEngine = (typeof supportedPolicyEngines)[number];
+type PolicyRenderer = (typeof supportedPolicyRenderers)[number];
 type TargetSelection = Partial<Record<KnownTargetKey, boolean>>;
 
 export type EffectiveHarnessModel = {
   allowedDependencies: Record<string, string[]>;
+  examples: EffectiveExample[];
+  heuristics: EffectiveHeuristic[];
   modules: EffectiveModule[];
   policies: EffectivePolicy[];
+  principles: EffectivePrinciple[];
   profile: EffectiveProfile;
   project: {
     name: string;
@@ -22,6 +29,7 @@ export type EffectiveHarnessModel = {
   schemaVersion: 1;
   stack: SupportedStack;
   targets: Record<KnownTargetKey, boolean>;
+  workflows: EffectiveWorkflow[];
 };
 
 type EffectiveProfile = {
@@ -37,10 +45,43 @@ type EffectiveModule = {
   publicApi: string;
 };
 
-type EffectivePolicy = {
+type EffectivePrinciple = {
+  guidance: string;
   id: string;
+  title: string;
+};
+
+type EffectivePolicy = {
+  guidance: string;
+  id: string;
+  implementation?: Partial<Record<SupportedStack, EffectivePolicyImplementation>>;
   intent: string;
-  severity?: PolicySeverity;
+  severity: PolicySeverity;
+  title: string;
+};
+
+type EffectivePolicyImplementation = {
+  engine: PolicyEngine;
+  renderer: PolicyRenderer;
+};
+
+type EffectiveWorkflow = {
+  id: string;
+  steps: string[];
+  title: string;
+};
+
+type EffectiveHeuristic = {
+  id: string;
+  questions: string[];
+  title: string;
+};
+
+type EffectiveExample = {
+  bad: string;
+  good: string;
+  id: string;
+  title: string;
 };
 
 type ProfileConfig = {
@@ -48,9 +89,13 @@ type ProfileConfig = {
     stack?: SupportedStack;
     targets: TargetSelection;
   };
+  examples: EffectiveExample[];
+  heuristics: EffectiveHeuristic[];
   policies: EffectivePolicy[];
+  principles: EffectivePrinciple[];
   profile: EffectiveProfile;
   schemaVersion: 1;
+  workflows: EffectiveWorkflow[];
 };
 
 type HarnessConfig = {
@@ -135,13 +180,17 @@ export async function loadEffectiveHarnessModel(
 
   return {
     allowedDependencies: moduleMetadata.allowedDependencies,
+    examples: profile.examples,
+    heuristics: profile.heuristics,
     modules: moduleMetadata.modules,
     policies: profile.policies,
+    principles: profile.principles,
     profile: profile.profile,
     project: harness.project,
     schemaVersion: 1,
     stack,
     targets: mergeTargets(profile.defaults.targets, harness.targets),
+    workflows: profile.workflows,
   };
 }
 
@@ -177,7 +226,21 @@ async function readYamlFile(filePath: string, displayFilePath: string): Promise<
 
 function parseProfileConfig(value: unknown, context: ValidationContext): ProfileConfig {
   const root = asObject(value, context, "$");
-  assertKnownKeys(root, ["schemaVersion", "profile", "defaults", "policies"], context, "$");
+  assertKnownKeys(
+    root,
+    [
+      "schemaVersion",
+      "profile",
+      "defaults",
+      "principles",
+      "policies",
+      "workflows",
+      "heuristics",
+      "examples",
+    ],
+    context,
+    "$",
+  );
   assertSchemaVersion(root.schemaVersion, context, "schemaVersion");
 
   const profileRoot = asObject(root.profile, context, "profile");
@@ -204,7 +267,11 @@ function parseProfileConfig(value: unknown, context: ValidationContext): Profile
 
   const stack = optionalStack(defaultsRoot.stack, context, "defaults.stack");
   const targets = parseTargets(defaultsRoot.targets, context, "defaults.targets");
+  const principles = parsePrinciples(root.principles, context, "principles");
   const policies = parsePolicies(root.policies, context, "policies");
+  const workflows = parseWorkflows(root.workflows, context, "workflows");
+  const heuristics = parseHeuristics(root.heuristics, context, "heuristics");
+  const examples = parseExamples(root.examples, context, "examples");
 
   const defaults: ProfileConfig["defaults"] = { targets };
   if (stack !== undefined) {
@@ -213,9 +280,13 @@ function parseProfileConfig(value: unknown, context: ValidationContext): Profile
 
   return {
     defaults,
+    examples,
+    heuristics,
     policies,
+    principles,
     profile,
     schemaVersion: 1,
+    workflows,
   };
 }
 
@@ -304,11 +375,159 @@ function parseModuleMetadata(value: unknown, context: ValidationContext): Module
   };
 }
 
+function parsePrinciples(
+  value: unknown,
+  context: ValidationContext,
+  fieldPath: string,
+): EffectivePrinciple[] {
+  return parseIdentifiedItems(
+    value,
+    context,
+    fieldPath,
+    (itemRoot, itemPath): EffectivePrinciple => {
+      assertKnownKeys(itemRoot, ["id", "title", "guidance"], context, itemPath);
+
+      return {
+        guidance: asNonEmptyString(itemRoot.guidance, context, `${itemPath}.guidance`),
+        id: asIdentifier(itemRoot.id, context, `${itemPath}.id`),
+        title: asNonEmptyString(itemRoot.title, context, `${itemPath}.title`),
+      };
+    },
+  );
+}
+
 function parsePolicies(
   value: unknown,
   context: ValidationContext,
   fieldPath: string,
 ): EffectivePolicy[] {
+  return parseIdentifiedItems(
+    value,
+    context,
+    fieldPath,
+    (policyRoot, policyPath): EffectivePolicy => {
+      assertKnownKeys(
+        policyRoot,
+        ["id", "title", "intent", "severity", "guidance", "implementation"],
+        context,
+        policyPath,
+      );
+
+      const policy: EffectivePolicy = {
+        guidance: asNonEmptyString(policyRoot.guidance, context, `${policyPath}.guidance`),
+        id: asIdentifier(policyRoot.id, context, `${policyPath}.id`),
+        intent: asNonEmptyString(policyRoot.intent, context, `${policyPath}.intent`),
+        severity: asPolicySeverity(policyRoot.severity, context, `${policyPath}.severity`),
+        title: asNonEmptyString(policyRoot.title, context, `${policyPath}.title`),
+      };
+
+      const implementation = parsePolicyImplementation(
+        policyRoot.implementation,
+        context,
+        `${policyPath}.implementation`,
+      );
+      if (implementation !== undefined) {
+        policy.implementation = implementation;
+      }
+
+      return policy;
+    },
+  );
+}
+
+function parseWorkflows(
+  value: unknown,
+  context: ValidationContext,
+  fieldPath: string,
+): EffectiveWorkflow[] {
+  return parseIdentifiedItems(value, context, fieldPath, (workflowRoot, workflowPath) => {
+    assertKnownKeys(workflowRoot, ["id", "title", "steps"], context, workflowPath);
+
+    return {
+      id: asIdentifier(workflowRoot.id, context, `${workflowPath}.id`),
+      steps: asNonEmptyStringArray(workflowRoot.steps, context, `${workflowPath}.steps`),
+      title: asNonEmptyString(workflowRoot.title, context, `${workflowPath}.title`),
+    };
+  });
+}
+
+function parseHeuristics(
+  value: unknown,
+  context: ValidationContext,
+  fieldPath: string,
+): EffectiveHeuristic[] {
+  return parseIdentifiedItems(value, context, fieldPath, (heuristicRoot, heuristicPath) => {
+    assertKnownKeys(heuristicRoot, ["id", "title", "questions"], context, heuristicPath);
+
+    return {
+      id: asIdentifier(heuristicRoot.id, context, `${heuristicPath}.id`),
+      questions: asNonEmptyStringArray(
+        heuristicRoot.questions,
+        context,
+        `${heuristicPath}.questions`,
+      ),
+      title: asNonEmptyString(heuristicRoot.title, context, `${heuristicPath}.title`),
+    };
+  });
+}
+
+function parseExamples(
+  value: unknown,
+  context: ValidationContext,
+  fieldPath: string,
+): EffectiveExample[] {
+  return parseIdentifiedItems(value, context, fieldPath, (exampleRoot, examplePath) => {
+    assertKnownKeys(exampleRoot, ["id", "title", "good", "bad"], context, examplePath);
+
+    return {
+      bad: asNonEmptyString(exampleRoot.bad, context, `${examplePath}.bad`),
+      good: asNonEmptyString(exampleRoot.good, context, `${examplePath}.good`),
+      id: asIdentifier(exampleRoot.id, context, `${examplePath}.id`),
+      title: asNonEmptyString(exampleRoot.title, context, `${examplePath}.title`),
+    };
+  });
+}
+
+function parsePolicyImplementation(
+  value: unknown,
+  context: ValidationContext,
+  fieldPath: string,
+): Partial<Record<SupportedStack, EffectivePolicyImplementation>> | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const root = asObject(value, context, fieldPath);
+  assertKnownKeys(root, supportedStacks, context, fieldPath);
+
+  const implementation: Partial<Record<SupportedStack, EffectivePolicyImplementation>> = {};
+  for (const stack of supportedStacks) {
+    if (root[stack] === undefined) {
+      continue;
+    }
+
+    const stackPath = `${fieldPath}.${stack}`;
+    const stackRoot = asObject(root[stack], context, stackPath);
+    assertKnownKeys(stackRoot, ["engine", "renderer"], context, stackPath);
+    implementation[stack] = {
+      engine: asPolicyEngine(stackRoot.engine, context, `${stackPath}.engine`),
+      renderer: asPolicyRenderer(stackRoot.renderer, context, `${stackPath}.renderer`),
+    };
+  }
+
+  if (Object.keys(implementation).length === 0) {
+    return undefined;
+  }
+
+  return implementation;
+}
+
+function parseIdentifiedItems<T extends { id: string }>(
+  value: unknown,
+  context: ValidationContext,
+  fieldPath: string,
+  parseItem: (itemRoot: Record<string, unknown>, itemPath: string) => T,
+): T[] {
   if (value === undefined) {
     return [];
   }
@@ -317,27 +536,19 @@ function parsePolicies(
     throw expected(context, fieldPath, "array");
   }
 
+  const itemIds = new Set<string>();
   return value
-    .map((policyValue, index): EffectivePolicy => {
-      const policyPath = `${fieldPath}[${index}]`;
-      const policyRoot = asObject(policyValue, context, policyPath);
-      assertKnownKeys(policyRoot, ["id", "intent", "severity"], context, policyPath);
-
-      const policy: EffectivePolicy = {
-        id: asIdentifier(policyRoot.id, context, `${policyPath}.id`),
-        intent: asNonEmptyString(policyRoot.intent, context, `${policyPath}.intent`),
-      };
-
-      const severity = optionalPolicySeverity(
-        policyRoot.severity,
-        context,
-        `${policyPath}.severity`,
-      );
-      if (severity !== undefined) {
-        policy.severity = severity;
+    .map((itemValue, index): T => {
+      const itemPath = `${fieldPath}[${index}]`;
+      const item = parseItem(asObject(itemValue, context, itemPath), itemPath);
+      if (itemIds.has(item.id)) {
+        throw new HarnessConfigError(
+          `${context.filePath}: ${itemPath}.id duplicates "${item.id}".`,
+        );
       }
 
-      return policy;
+      itemIds.add(item.id);
+      return item;
     })
     .sort((left, right) => left.id.localeCompare(right.id));
 }
@@ -482,6 +693,24 @@ function optionalString(
   return asNonEmptyString(value, context, fieldPath);
 }
 
+function asNonEmptyStringArray(
+  value: unknown,
+  context: ValidationContext,
+  fieldPath: string,
+): string[] {
+  if (!Array.isArray(value)) {
+    throw expected(context, fieldPath, "array");
+  }
+
+  if (value.length === 0) {
+    throw new HarnessConfigError(
+      `${context.filePath}: ${fieldPath} must include at least one item.`,
+    );
+  }
+
+  return value.map((item, index) => asNonEmptyString(item, context, `${fieldPath}[${index}]`));
+}
+
 function asIdentifier(value: unknown, context: ValidationContext, fieldPath: string): string {
   const identifier = asNonEmptyString(value, context, fieldPath);
   if (!/^[a-z][a-z0-9-]*$/.test(identifier)) {
@@ -521,15 +750,11 @@ function optionalStack(
   return stack;
 }
 
-function optionalPolicySeverity(
+function asPolicySeverity(
   value: unknown,
   context: ValidationContext,
   fieldPath: string,
-): PolicySeverity | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
+): PolicySeverity {
   const severity = asNonEmptyString(value, context, fieldPath);
   if (!isPolicySeverity(severity)) {
     throw new HarnessConfigError(
@@ -538,6 +763,36 @@ function optionalPolicySeverity(
   }
 
   return severity;
+}
+
+function asPolicyEngine(
+  value: unknown,
+  context: ValidationContext,
+  fieldPath: string,
+): PolicyEngine {
+  const engine = asNonEmptyString(value, context, fieldPath);
+  if (!isPolicyEngine(engine)) {
+    throw new HarnessConfigError(
+      `${context.filePath}: ${fieldPath} must be one of: ${supportedPolicyEngines.join(", ")}.`,
+    );
+  }
+
+  return engine;
+}
+
+function asPolicyRenderer(
+  value: unknown,
+  context: ValidationContext,
+  fieldPath: string,
+): PolicyRenderer {
+  const renderer = asNonEmptyString(value, context, fieldPath);
+  if (!isPolicyRenderer(renderer)) {
+    throw new HarnessConfigError(
+      `${context.filePath}: ${fieldPath} must be one of: ${supportedPolicyRenderers.join(", ")}.`,
+    );
+  }
+
+  return renderer;
 }
 
 function asRelativePath(value: unknown, context: ValidationContext, fieldPath: string): string {
@@ -574,7 +829,10 @@ function expected(
   fieldPath: string,
   expectedType: string,
 ): HarnessConfigError {
-  return new HarnessConfigError(`${context.filePath}: ${fieldPath} must be a ${expectedType}.`);
+  const article = /^[aeiou]/.test(expectedType) ? "an" : "a";
+  return new HarnessConfigError(
+    `${context.filePath}: ${fieldPath} must be ${article} ${expectedType}.`,
+  );
 }
 
 function isSupportedStack(value: string): value is SupportedStack {
@@ -583,6 +841,14 @@ function isSupportedStack(value: string): value is SupportedStack {
 
 function isPolicySeverity(value: string): value is PolicySeverity {
   return (supportedPolicySeverities as readonly string[]).includes(value);
+}
+
+function isPolicyEngine(value: string): value is PolicyEngine {
+  return (supportedPolicyEngines as readonly string[]).includes(value);
+}
+
+function isPolicyRenderer(value: string): value is PolicyRenderer {
+  return (supportedPolicyRenderers as readonly string[]).includes(value);
 }
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {

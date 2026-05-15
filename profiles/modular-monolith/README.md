@@ -2,15 +2,15 @@
 
 This profile captures opinionated guidance for building and evolving modular monoliths with AI-assisted development.
 
-It should eventually define:
+This profile defines one narrow module boundary policy for TypeScript modular monoliths.
 
-- what counts as a module
-- how module boundaries are expressed
-- which dependencies are allowed or discouraged
-- how persistence and integration concerns are isolated
-- when architectural decision records are expected
-- how agents should plan and review modular changes
-- which checks should run locally and in CI
-- how temporary boundary exceptions are documented
+It includes:
 
-This directory is currently a placeholder for the reusable profile pack. The detailed schema is still being defined in [docs/profile-model.md](../../docs/profile-model.md).
+- a principle that modules own behavior behind explicit public APIs
+- an enforcing module boundary policy
+- TypeScript implementation metadata for a future dependency-cruiser renderer
+- a workflow for changing module boundaries
+- architecture review heuristics for coupling and boundary drift
+- a good/bad example of cross-module access
+
+This profile content is structured in [profile.yml](profile.yml) so `inspect effective-model` can validate and expose it deterministically. Rendering and executable checks are separate CLI capabilities.

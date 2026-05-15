@@ -11,7 +11,7 @@ Read the documents that match the task at hand:
 - [Product Thesis](product-thesis.md): product framing, scope, and non-goals.
 - [Roadmap](roadmap.md): iterative implementation plan and MVP scope.
 - [Harness Model](harness-model.md): canonical harness, generated targets, and agent-neutral source/target design.
-- [Effective Harness Model](effective-harness-model.md): iteration-one schemas, merge rules, validation rules, and inspect command.
+- [Effective Harness Model](effective-harness-model.md): schemas, merge rules, validation rules, and inspect command.
 - [Profile Model](profile-model.md): reusable architecture profiles and project-specific harness instances.
 - [Architecture Knowledge](architecture-knowledge.md): where architectural knowledge is encoded.
 - [Rendering And Checks](rendering-and-checks.md): deterministic rendering, CI adapters, check orchestration, and the boundary between checks and AI-assisted review.

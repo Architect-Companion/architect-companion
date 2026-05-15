@@ -2,7 +2,7 @@
 
 The effective harness model is the resolved, validated contract consumed by future renderers and checks.
 
-Iteration one supports one vertical slice: a reusable profile, a project harness file, and project module metadata.
+The current model resolves a reusable profile, a project harness file, and project module metadata.
 
 ## Inputs
 
@@ -17,7 +17,36 @@ defaults:
   stack: typescript
   targets:
     agentsMd: true
-policies: []
+principles:
+  - id: module-ownership
+    title: Modules own behavior behind public APIs
+    guidance: Treat each module as the owner of its behavior and invariants.
+policies:
+  - id: module-boundaries
+    title: Module boundaries
+    intent: Modules may import another module only through its public API.
+    severity: error
+    guidance: Cross-module imports should target the dependency module public API.
+    implementation:
+      typescript:
+        engine: dependency-cruiser
+        renderer: dependency-cruiser-config
+workflows:
+  - id: change-module-boundary
+    title: Change a module boundary
+    steps:
+      - Identify the affected modules.
+      - Update public APIs before changing consumers.
+heuristics:
+  - id: architecture-review
+    title: Architecture review
+    questions:
+      - Does every cross-module call use the target module public API?
+examples:
+  - id: module-access
+    title: Module access
+    good: import { findCustomer } from "../identity";
+    bad: import { loadCustomerRow } from "../identity/internal/customer-repository";
 ```
 
 Project harness configuration lives at `.architect-companion/harness.yml`:
@@ -53,7 +82,20 @@ allowed_dependencies:
 - Harness `stack` overrides the profile default; a stack is required after merging.
 - Harness targets override profile targets key by key.
 - Known targets omitted from both inputs default to `false`.
-- Module metadata is project-owned and does not merge with profile data in iteration one.
+- Profile principles, policies, workflows, heuristics, and examples are profile-owned.
+- Module metadata is project-owned and does not merge with profile data in the current implementation.
+
+## Profile Guidance Sections
+
+Structured profile guidance is part of the effective model:
+
+- `principles` are renderable architectural guidance.
+- `policies` are architectural expectations. Policies may include implementation metadata for a supported stack and engine.
+- `workflows` are repeatable steps for recurring architecture changes.
+- `heuristics` are review questions for judgment that is not deterministic enough to enforce directly.
+- `examples` provide compact good and bad examples for renderer output.
+
+Only policies are candidates for future executable checks. The other sections are codified as deterministic, renderable guidance.
 
 ## Validation Rules
 
@@ -62,6 +104,9 @@ allowed_dependencies:
 - Names use lowercase letters, numbers, and hyphens, starting with a letter.
 - Profile versions use a semantic-version-like shape.
 - Paths are project-relative POSIX paths and may not escape the project.
+- Profile guidance entries must use unique lowercase identifier `id` values and are sorted by `id`.
+- Policy severities must be `advisory`, `warning`, or `error`.
+- Policy implementation metadata supports `typescript` with `dependency-cruiser` and `dependency-cruiser-config`.
 - Module names must be unique.
 - `allowed_dependencies` keys and values must reference known modules.
 
