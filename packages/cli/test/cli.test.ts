@@ -72,12 +72,12 @@ describe("runCli", () => {
   it("fails for unknown arguments", async () => {
     const { io, writes } = createIo();
 
-    const exitCode = await runCli(["render"], io, options);
+    const exitCode = await runCli(["unknown-command"], io, options);
 
     expect(exitCode).toBe(1);
     expect(writes.stdout).toBe("");
     expect(writes.stderr).toBe(
-      "Unknown argument: render\nRun `architect-companion --help` for usage.\n",
+      "Unknown argument: unknown-command\nRun `architect-companion --help` for usage.\n",
     );
   });
 
