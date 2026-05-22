@@ -1,20 +1,23 @@
 #!/usr/bin/env node
 import { realpathSync } from "node:fs";
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
   HarnessConfigError,
+  defaultProfilesDir,
   loadEffectiveHarnessModel,
+  parseHarnessFromYaml,
   serializeEffectiveHarnessModel,
-} from "./model/effective-model.js";
+} from "@architect-companion/core";
 
 export const HELP_TEXT = `Architect Companion
 
 Usage:
   architect-companion [options]
   architect-companion inspect effective-model [--project <dir>] [--profiles <dir>]
+  architect-companion init [--project <dir>] [--server <url>]
 
 Options:
   -h, --help          Show this help message.
@@ -23,6 +26,11 @@ Options:
 Commands:
   inspect effective-model
       Validate the harness inputs and print the resolved effective model as JSON.
+
+  init
+      Call the render API and write architecture artifacts to the project directory.
+      Reads .architect-companion/harness.yml and the referenced modules file.
+      --server <url>  Server base URL (default: http://localhost:3000)
 `;
 
 type Writable = {
@@ -76,6 +84,10 @@ export async function runCli(args: string[], io: CliIo, options: CliOptions): Pr
 
   if (firstArg === "inspect") {
     return runInspectCommand(args.slice(1), io, options);
+  }
+
+  if (firstArg === "init") {
+    return runInitCommand(args.slice(1), io, options);
   }
 
   io.stderr.write(`Unknown argument: ${firstArg ?? ""}\n`);
@@ -154,6 +166,93 @@ async function runInspectCommand(args: string[], io: CliIo, options: CliOptions)
   }
 }
 
+type InitOptions = {
+  projectDir: string;
+  serverUrl: string;
+};
+
+type InitOptionsResult =
+  | { options: InitOptions; success: true }
+  | { message: string; success: false };
+
+async function runInitCommand(args: string[], io: CliIo, options: CliOptions): Promise<number> {
+  const parsedOptions = parseInitOptions(args, options);
+  if (!parsedOptions.success) {
+    io.stderr.write(`${parsedOptions.message}\n`);
+    io.stderr.write("Run `architect-companion --help` for usage.\n");
+    return 1;
+  }
+
+  const { projectDir, serverUrl } = parsedOptions.options;
+  const harnessDir = join(projectDir, ".architect-companion");
+
+  let harnessYaml: string;
+  try {
+    harnessYaml = await readFile(join(harnessDir, "harness.yml"), "utf8");
+  } catch {
+    io.stderr.write(`No .architect-companion/harness.yml found in ${projectDir}\n`);
+    return 1;
+  }
+
+  let harness: ReturnType<typeof parseHarnessFromYaml>;
+  try {
+    harness = parseHarnessFromYaml(harnessYaml);
+  } catch (error) {
+    if (error instanceof HarnessConfigError) {
+      io.stderr.write(`${error.message}\n`);
+      return 1;
+    }
+    throw error;
+  }
+
+  let modulesYaml: string;
+  try {
+    modulesYaml = await readFile(join(harnessDir, harness.modules), "utf8");
+  } catch {
+    io.stderr.write(`Modules file not found: ${join(harnessDir, harness.modules)}\n`);
+    return 1;
+  }
+
+  const body: Record<string, unknown> = {
+    profileName: harness.profile.name,
+    profileVersion: harness.profile.version,
+    projectName: harness.project.name,
+    modulesYaml,
+  };
+  if (harness.stack !== undefined) body["stack"] = harness.stack;
+  if (harness.targets !== undefined) body["targets"] = harness.targets;
+
+  let response: Response;
+  try {
+    response = await fetch(`${serverUrl}/api/render`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    io.stderr.write(`Could not reach server at ${serverUrl}. Is it running?\n`);
+    return 1;
+  }
+
+  const data = (await response.json()) as { files?: Record<string, string>; error?: string };
+
+  if (!response.ok) {
+    io.stderr.write(`Render failed: ${data.error ?? "unknown error"}\n`);
+    return 1;
+  }
+
+  const files = data.files ?? {};
+  for (const [filePath, content] of Object.entries(files)) {
+    const fullPath = join(projectDir, filePath);
+    await mkdir(dirname(fullPath), { recursive: true });
+    await writeFile(fullPath, content, "utf8");
+    io.stdout.write(`  wrote ${filePath}\n`);
+  }
+
+  io.stdout.write(`\nInitialized ${harness.project.name}.\n`);
+  return 0;
+}
+
 function parseInspectOptions(args: string[], options: CliOptions): InspectOptionsResult {
   const cwd = options.cwd ?? process.cwd();
   let projectDir = cwd;
@@ -200,6 +299,40 @@ function parseInspectOptions(args: string[], options: CliOptions): InspectOption
   };
 }
 
+function parseInitOptions(args: string[], options: CliOptions): InitOptionsResult {
+  const cwd = options.cwd ?? process.cwd();
+  let projectDir = cwd;
+  let serverUrl = process.env["AC_SERVER_URL"] ?? "http://localhost:3000";
+
+  for (let index = 0; index < args.length; index += 1) {
+    const flag = args[index];
+    const value = args[index + 1];
+
+    if (flag === "--project") {
+      const optionValue = parseDirectoryOptionValue("--project", value);
+      if (!optionValue.success) {
+        return optionValue;
+      }
+      projectDir = resolve(cwd, optionValue.value);
+      index += 1;
+      continue;
+    }
+
+    if (flag === "--server") {
+      if (value === undefined || value.trim() === "" || value.startsWith("--")) {
+        return { message: "--server requires a URL.", success: false };
+      }
+      serverUrl = value;
+      index += 1;
+      continue;
+    }
+
+    return { message: `Unknown argument: ${flag ?? ""}`, success: false };
+  }
+
+  return { options: { projectDir, serverUrl }, success: true };
+}
+
 function parseDirectoryOptionValue(
   flag: string,
   value: string | undefined,
@@ -223,8 +356,4 @@ function parseDirectoryOptionValue(
     success: true,
     value,
   };
-}
-
-function defaultProfilesDir(): string {
-  return fileURLToPath(new URL("../profiles", import.meta.url));
 }

@@ -4,3 +4,9 @@ node_modules/
 
 .DS_Store
 npm-debug.log*
+
+*.task.md
+
+# data directory: keep the folder structure, ignore actual content
+data/profiles/*/
+data/artifacts/*/

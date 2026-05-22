@@ -1,0 +1,18 @@
+{
+  "name": "@architect-companion/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "node --watch dist/index.js",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@architect-companion/core": "*",
+    "drizzle-orm": "^0.44.0",
+    "fastify": "^5.0.0"
+  },
+  "devDependencies": {}
+}

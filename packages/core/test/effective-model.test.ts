@@ -9,7 +9,7 @@ import {
   HarnessConfigError,
   loadEffectiveHarnessModel,
   serializeEffectiveHarnessModel,
-} from "../src/model/effective-model.js";
+} from "../src/index.js";
 
 const profilesDir = fileURLToPath(new URL("../profiles", import.meta.url));
 const sampleProjectDir = fileURLToPath(new URL("fixtures/sample-project", import.meta.url));

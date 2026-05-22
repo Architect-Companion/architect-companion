@@ -1,0 +1,26 @@
+{
+  "name": "architect-companion",
+  "version": "0.0.0",
+  "description": "An opinionated architecture harness for agentic engineering.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "architect-companion": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@architect-companion/core": "*"
+  }
+}

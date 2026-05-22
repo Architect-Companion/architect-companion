@@ -1,6 +1,6 @@
-# Server Architecture
+# Zielbild: Server-Architektur
 
-Dieses Dokument beschreibt die geplante Server-Architektur für Architect Companion. Ziel ist es, die bisher lokale CLI-Pipeline um eine zentral verwaltete Plattform zu erweitern: Profiles werden über eine Web-UI hochgeladen, in einer Datenbank persistiert und über eine API für Coding Agents abrufbar gemacht.
+Dieses Dokument beschreibt das langfristige Zielbild von Architect Companion als Server-Plattform. Die gesamte Logik — Profile, Harness Configs, Effective Model Building und Rendering — läuft auf dem Server. Auf dem lokalen Entwickler-Rechner verbleibt ausschließlich die CLI, die dem Server ihre Projekt-ID und die lokalen Modul-Metadaten mitgibt und fertig gerenderte Dateien zurückbekommt.
 
 ---
 
@@ -8,221 +8,203 @@ Dieses Dokument beschreibt die geplante Server-Architektur für Architect Compan
 
 ```mermaid
 graph TB
-    subgraph Browser["Web UI (Browser)"]
-        UI_Upload["Profile Upload\n(YAML)"]
-        UI_List["Profile Library\n(Übersicht & Verwaltung)"]
-        UI_Preview["Render Preview\n(Output Vorschau)"]
-    end
-
-    subgraph Server["Architect Companion Server"]
+    subgraph Browser["☁️ Web UI"]
         direction TB
-        subgraph API["REST API"]
-            API_Profiles["/api/profiles\n(CRUD)"]
-            API_Render["/api/render\n(Rendering Engine)"]
-        end
-        subgraph Core["Core Logic"]
-            SVC_Profile["Profile Service\n(Validation & Parsing)"]
-            SVC_Render["Renderer Service\n(Deterministic Rendering)"]
-            SVC_Model["Effective Model Builder\n(Merge & Resolve)"]
-        end
+        UI_Profiles["Profile verwalten\nYAML hochladen & versionieren"]
+        UI_Harness["Harness Configs verwalten\nProjekt-Konfigurationen"]
+        UI_Preview["Render Preview\nOutput-Vorschau je Projekt"]
     end
 
-    subgraph DB["Persistenz"]
-        DB_Profiles[("Profile Store\n(YAML + Metadata)")]
-    end
-
-    subgraph Local["Lokaler Entwickler-Rechner"]
+    subgraph Server["🖥️ Architect Companion Server"]
         direction TB
-        CLI["architect-companion CLI"]
-        CLI_Init["architect-companion init\n(Profil vom Server laden)"]
-        CLI_Render["architect-companion render\n(Lokales Rendering)"]
-        CLI_Check["architect-companion check\n(Policy Checks)"]
-
-        subgraph Project["Projekt (lokal)"]
-            Harness[".architect-companion/\nharness.yml + modules.yml"]
-            Generated["Generierte Dateien\n(AGENTS.md, .cursor/, ...)"]
+        subgraph API_Layer["REST API"]
+            direction TB
+            API_Profiles["/api/profiles\nCRUD für Profile"]
+            API_Harnesses["/api/harnesses\nCRUD für Harness Configs"]
+            API_Render["/api/render\nRendering-Endpunkt"]
         end
-
-        subgraph Tools["Lokale Dev Tools"]
-            DepCruiser["dependency-cruiser"]
-            GHActions["GitHub Actions"]
-            Cursor["Cursor / Claude Code"]
+        subgraph Core_Layer["Core"]
+            direction TB
+            SVC_Profile["Profile Service\nValidierung & Parsing"]
+            SVC_Harness["Harness Service\nProjekt-Konfigurationen"]
+            SVC_Model["Effective Model Builder\nMerge: Profile + Harness + Module"]
+            SVC_Render["Renderer Service\nDeterministisches Rendering"]
         end
+        DB[("Datenbank\nProfile · Harness Configs · Metadaten")]
     end
 
-    %% UI → API
-    UI_Upload -->|"YAML hochladen"| API_Profiles
-    UI_List -->|"Profile abrufen"| API_Profiles
-    UI_Preview -->|"Render-Vorschau"| API_Render
+    subgraph Local["💻 Lokaler Entwickler-Rechner"]
+        direction TB
+        CLI["architect-companion CLI\nnur HTTP-Client + Datei-Schreiber"]
+        Modules["modules.yml\nModul-Struktur des lokalen Projekts"]
+        Files["Generierte Projekt-Dateien\nAGENTS.md · CLAUDE.md\n.cursor/rules/ · .github/workflows/"]
+    end
 
-    %% API → Core
+    UI_Profiles -->|"YAML hochladen"| API_Profiles
+    UI_Harness -->|"Harness verwalten"| API_Harnesses
+    UI_Preview -->|"Render anfragen"| API_Render
+
     API_Profiles --> SVC_Profile
-    API_Render --> SVC_Render
-    SVC_Render --> SVC_Model
-    SVC_Profile --> SVC_Model
+    SVC_Profile --> DB
 
-    %% Core → DB
-    SVC_Profile -->|"Persistieren"| DB_Profiles
-    SVC_Model -->|"Profile laden"| DB_Profiles
+    API_Harnesses --> SVC_Harness
+    SVC_Harness --> DB
 
-    %% CLI → API
-    CLI_Init -->|"GET /api/profiles/:id"| API_Profiles
-    CLI_Init -->|"Profil lokal schreiben"| Harness
+    API_Render --> SVC_Model
+    SVC_Model -->|"Profil laden"| DB
+    SVC_Model -->|"Harness Config laden"| DB
+    SVC_Model --> SVC_Render
 
-    %% CLI → lokale Pipeline
-    CLI_Render -->|"Liest"| Harness
-    CLI_Render -->|"Schreibt"| Generated
-    CLI_Check -->|"Validiert"| Generated
-
-    %% Lokale Outputs → Tools
-    Generated -->|"AGENTS.md / CLAUDE.md"| Cursor
-    Generated -->|".cursor/rules/"| Cursor
-    Generated -->|"dependency-cruiser.config.js"| DepCruiser
-    Generated -->|".github/workflows/"| GHActions
+    CLI -->|"project-id + modules.yml"| API_Render
+    Modules -->|"lokal gelesen"| CLI
+    API_Render -->|"Gerenderte Dateien"| CLI
+    CLI -->|"Dateien schreiben"| Files
 ```
 
 ---
 
-## Datenflüsse
+## Datenbank-Schema
 
-### 1. Profile hochladen (Web UI → Server)
+```mermaid
+graph TB
+    subgraph DB["Datenbank"]
+        direction TB
+        T_Profiles["profiles\n─────────────────\nid · name · version\nyaml_content · created_at"]
+        T_Harnesses["harness_configs\n─────────────────\nid · project_id (slug)\nprofile_id (FK) · targets\ncreated_at · updated_at"]
+    end
+
+    T_Harnesses -->|"referenziert"| T_Profiles
+```
+
+Ein Harness Config ist die Server-seitige Entsprechung der bisherigen `harness.yml`: Sie verknüpft ein Projekt (per `project_id`-Slug) mit einem Profil und definiert die aktiven Targets. `modules.yml` bleibt lokal, da sie die tatsächliche Code-Struktur des Projekts beschreibt.
+
+---
+
+## Datenfluss 1: Profil hochladen
 
 ```mermaid
 sequenceDiagram
-    actor Architect
+    actor A as Architect
     participant UI as Web UI
     participant API as /api/profiles
     participant SVC as Profile Service
-    participant DB as Profile Store
+    participant DB as Datenbank
 
-    Architect->>UI: YAML-Datei auswählen & hochladen
-    UI->>API: POST /api/profiles (multipart YAML)
-    API->>SVC: validateAndParse(yaml)
-    SVC-->>API: ParsedProfile oder ValidationError
-    alt Valides Profil
-        API->>DB: INSERT profile (yaml, metadata)
-        DB-->>API: profileId
+    A->>UI: YAML-Datei auswählen & hochladen
+    UI->>API: POST /api/profiles
+    API->>SVC: validate(yaml)
+    alt Valide
+        SVC->>DB: Profil speichern
+        DB-->>SVC: profileId
         API-->>UI: 201 { id, name, version }
-        UI-->>Architect: Erfolg + Profil-ID
-    else Invalides Profil
-        API-->>UI: 400 { errors: [...] }
-        UI-->>Architect: Fehleranzeige mit Details
+        UI-->>A: Erfolg + Profil-ID
+    else Invalide
+        API-->>UI: 400 { errors }
+        UI-->>A: Fehlerdetails
     end
 ```
 
-### 2. Lokale Initialisierung via CLI
+---
+
+## Datenfluss 2: Harness Config anlegen
+
+```mermaid
+sequenceDiagram
+    actor A as Architect
+    participant UI as Web UI
+    participant API as /api/harnesses
+    participant SVC as Harness Service
+    participant DB as Datenbank
+
+    A->>UI: Projekt-ID eingeben, Profil wählen, Targets konfigurieren
+    UI->>API: POST /api/harnesses\n{ projectId, profileId, targets }
+    API->>SVC: validate(config)
+    SVC->>DB: Harness Config speichern
+    DB-->>SVC: harnessId
+    API-->>UI: 201 { id, projectId, profileId }
+    UI-->>A: Gespeichert
+```
+
+---
+
+## Datenfluss 3: CLI rendert Dateien
 
 ```mermaid
 sequenceDiagram
     actor Dev as Entwickler
     participant CLI as architect-companion CLI
-    participant API as Server API
-    participant FS as Lokales Dateisystem
+    participant FS as Lokales Projekt
+    participant API as Server /api/render
 
-    Dev->>CLI: architect-companion init
-    CLI->>Dev: Welchen Server? Welches Profil?
-    Dev-->>CLI: https://ac.example.com | modular-monolith@0.1.0
+    Dev->>CLI: architect-companion init [--project my-app]
+    CLI->>FS: modules.yml lesen
+    CLI->>API: POST /api/render\n{ projectId: "my-app", moduleMetadata }
 
-    CLI->>API: GET /api/profiles?name=modular-monolith&version=0.1.0
-    API-->>CLI: 200 { yaml: "...", metadata: {...} }
+    Note over API: Kein projectId → Default-Harness\nMit projectId → projektspezifischer Harness
 
-    CLI->>FS: .architect-companion/harness.yml schreiben
-    CLI->>FS: profiles/modular-monolith/profile.yml schreiben (Cache)
-    CLI-->>Dev: Initialisiert. Nächster Schritt: architect-companion render
-```
+    API->>API: Harness Config aus DB laden\n(oder Default-Harness)
+    API->>API: Profil aus DB laden
+    API->>API: Effective Model bauen
+    API->>API: Rendern
+    API-->>CLI: 200 { "AGENTS.md": "...", ".cursor/rules/...": "..." }
 
-### 3. Rendering via Server API (Remote Render)
+    CLI->>FS: AGENTS.md schreiben
+    CLI->>FS: CLAUDE.md schreiben
+    CLI->>FS: .cursor/rules/*.mdc schreiben
+    CLI->>FS: .github/workflows/architect-check.yml schreiben
 
-```mermaid
-sequenceDiagram
-    actor Client as CLI / CI Pipeline
-    participant API as /api/render
-    participant SVC as Renderer Service
-    participant Model as Effective Model Builder
-    participant DB as Profile Store
-
-    Client->>API: POST /api/render\n{ profileId, harnessConfig, moduleMetadata }
-    API->>Model: buildEffectiveModel(profileId, config)
-    Model->>DB: GET profile by ID
-    DB-->>Model: ProfileConfig (YAML)
-    Model-->>API: EffectiveHarnessModel
-
-    API->>SVC: render(effectiveModel, targets)
-    SVC-->>API: RenderResult { files: [...] }
-
-    API-->>Client: 200 {\n  "AGENTS.md": "...",\n  ".cursor/rules/modules.mdc": "...",\n  "dependency-cruiser.config.js": "..."\n}
+    CLI-->>Dev: Fertig. Alle Dateien aktualisiert.
 ```
 
 ---
 
-## Komponenten
+## Render-Outputs der API
 
-### Web UI
+Je nach konfigurierten Targets im Harness Config liefert die Render API verschiedene Dateien zurück:
 
-| Komponente | Beschreibung |
+| Target | Generierte Datei(en) |
 |---|---|
-| Profile Upload | Drag & Drop / Dateiauswahl für YAML-Dateien, inkl. Validierungs-Feedback |
-| Profile Library | Übersicht aller gespeicherten Profile mit Name, Version, Stack |
-| Render Preview | Vorschau der generierten Ausgabedateien für ein gewähltes Profil |
+| `agentsMd` | `AGENTS.md`, `CLAUDE.md` |
+| `cursor` | `.cursor/rules/<modul>.mdc` |
+| `dependencyCruiser` | `.dependency-cruiser.config.js` |
+| `githubActions` | `.github/workflows/architect-check.yml` |
 
-### Server API
+---
 
-| Endpunkt | Methode | Beschreibung |
-|---|---|---|
-| `/api/profiles` | `GET` | Alle Profile auflisten (Name, Version, Stack) |
-| `/api/profiles` | `POST` | Neues Profil hochladen (YAML, multipart) |
-| `/api/profiles/:id` | `GET` | Einzelnes Profil abrufen (YAML + Metadata) |
-| `/api/profiles/:id` | `DELETE` | Profil löschen |
-| `/api/render` | `POST` | Effektives Modell rendern (gibt Ausgabedateien zurück) |
-
-### CLI-Erweiterungen
+## CLI-Befehle (Zielbild)
 
 | Befehl | Beschreibung |
 |---|---|
-| `architect-companion init` | Verbindet Projekt mit Server, lädt Profil herunter, schreibt `harness.yml` |
-| `architect-companion render` | Rendert Ausgabedateien lokal (aus gecachtem oder lokalem Profil) |
-| `architect-companion render --remote` | Rendering via Server-API statt lokal |
-| `architect-companion check` | Policy Checks mit externen Tools (dependency-cruiser etc.) |
-| `architect-companion profile sync` | Profil-Cache mit Serverversion abgleichen |
+| `architect-companion init` | Rendert mit Default-Harness, schreibt alle Dateien ins Projekt |
+| `architect-companion init --project <id>` | Rendert mit projektspezifischem Harness vom Server |
+| `architect-companion sync` | Dateien neu rendern lassen, z. B. nach Profil-Update auf dem Server |
+| `architect-companion status` | Zeigt Server-URL, Projekt-ID, aktives Profil |
 
 ---
 
-## Ausgabe-Formate der Render API
-
-Die Render API gibt je nach konfigurierten Targets verschiedene Dateien zurück:
-
-```
-targets:
-  agentsMd       → AGENTS.md, CLAUDE.md
-  cursor         → .cursor/rules/<module>.mdc
-  dependencyCruiser → .dependency-cruiser.config.js
-  githubActions  → .github/workflows/architect-check.yml
-```
-
-Der Client (CLI oder CI) schreibt diese Dateien in das lokale Projektverzeichnis.
-
----
-
-## Technologie-Überlegungen
+## Tech Stack (Zielbild)
 
 ```mermaid
-graph LR
-    subgraph Frontend
-        A["React / Next.js\n(Web UI)"]
+graph TB
+    subgraph Frontend["Web UI"]
+        FE["React / Next.js"]
     end
 
-    subgraph Backend
-        B["Node.js + TypeScript\n(Express / Fastify)"]
-        C["Shared: effective-model.ts\n(bestehende Logik wiederverwenden)"]
+    subgraph Backend["Server"]
+        BE["Node.js · TypeScript\nExpress / Fastify"]
+        Core["effective-model.ts + Renderer Services\n(migriert aus bestehendem CLI-Code)"]
     end
 
-    subgraph Storage
-        D["PostgreSQL oder SQLite\n(Profile als YAML-Text + Metadaten)"]
+    subgraph Storage["Persistenz"]
+        DB["PostgreSQL\nProfile · Harness Configs"]
     end
 
-    A -->|"HTTP/REST"| B
-    B --> C
-    B --> D
+    subgraph LocalCLI["CLI (lokal, npm-Package)"]
+        CLI["architect-companion\nHTTP-Client + Datei-Schreiber\n+ modules.yml lesen"]
+    end
+
+    FE -->|"REST"| BE
+    BE --> Core
+    BE --> DB
+    CLI -->|"REST /api/render"| BE
 ```
-
-Die bestehende `effective-model.ts`-Logik lässt sich direkt im Server-Backend wiederverwenden — kein Rewrite nötig. Der Server wird zum Host der bisher nur lokalen Resolver- und Renderer-Pipeline.

@@ -83,8 +83,10 @@ describe("runCli", () => {
 
   it("prints the effective model for a valid project", async () => {
     const { io, writes } = createIo();
-    const projectDir = fileURLToPath(new URL("fixtures/sample-project", import.meta.url));
-    const profilesDir = fileURLToPath(new URL("../profiles", import.meta.url));
+    const projectDir = fileURLToPath(
+      new URL("../../core/test/fixtures/sample-project", import.meta.url),
+    );
+    const profilesDir = fileURLToPath(new URL("../../core/profiles", import.meta.url));
 
     const exitCode = await runCli(
       ["inspect", "effective-model", "--project", projectDir, "--profiles", profilesDir],
@@ -109,7 +111,7 @@ describe("runCli", () => {
   it("fails inspect with useful validation errors", async () => {
     const { io, writes } = createIo();
     const projectDir = mkdtempSync(join(tmpdir(), "architect-companion-empty-"));
-    const profilesDir = fileURLToPath(new URL("../profiles", import.meta.url));
+    const profilesDir = fileURLToPath(new URL("../../core/profiles", import.meta.url));
 
     try {
       const exitCode = await runCli(

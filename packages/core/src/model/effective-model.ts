@@ -127,6 +127,32 @@ type ValidationContext = {
   filePath: string;
 };
 
+export type ProfileMetadata = {
+  name: string;
+  summary?: string;
+  title?: string;
+  version: string;
+};
+
+export function parseProfileFromYaml(source: string, displayPath = "profile.yml"): ProfileMetadata {
+  const document = parseDocument(source);
+  if (document.errors.length > 0) {
+    const firstError = document.errors[0];
+    throw new HarnessConfigError(
+      `${displayPath}: invalid YAML${firstError?.message === undefined ? "." : `: ${firstError.message}`}`,
+    );
+  }
+
+  const config = parseProfileConfig(document.toJS(), { filePath: displayPath });
+  const metadata: ProfileMetadata = {
+    name: config.profile.name,
+    version: config.profile.version,
+  };
+  if (config.profile.summary !== undefined) metadata.summary = config.profile.summary;
+  if (config.profile.title !== undefined) metadata.title = config.profile.title;
+  return metadata;
+}
+
 export class HarnessConfigError extends Error {
   constructor(message: string) {
     super(message);
@@ -192,6 +218,105 @@ export async function loadEffectiveHarnessModel(
     targets: mergeTargets(profile.defaults.targets, harness.targets),
     workflows: profile.workflows,
   };
+}
+
+export type BuildModelOptions = {
+  modulesYaml: string;
+  profileYaml: string;
+  project: { name: string };
+  stack?: string;
+  targets?: Record<string, boolean>;
+};
+
+export function buildEffectiveHarnessModel(options: BuildModelOptions): EffectiveHarnessModel {
+  const profileDoc = parseDocument(options.profileYaml);
+  if (profileDoc.errors.length > 0) {
+    const firstError = profileDoc.errors[0];
+    throw new HarnessConfigError(
+      `profile.yml: invalid YAML${firstError?.message === undefined ? "." : `: ${firstError.message}`}`,
+    );
+  }
+  const profile = parseProfileConfig(profileDoc.toJS(), { filePath: "profile.yml" });
+
+  const modulesDoc = parseDocument(options.modulesYaml);
+  if (modulesDoc.errors.length > 0) {
+    const firstError = modulesDoc.errors[0];
+    throw new HarnessConfigError(
+      `modules.yml: invalid YAML${firstError?.message === undefined ? "." : `: ${firstError.message}`}`,
+    );
+  }
+  const moduleMetadata = parseModuleMetadata(modulesDoc.toJS(), { filePath: "modules.yml" });
+
+  const harnessTargets: TargetSelection = {};
+  if (options.targets !== undefined) {
+    for (const key of knownTargetKeys) {
+      const value = options.targets[key];
+      if (value !== undefined) {
+        harnessTargets[key] = value;
+      }
+    }
+  }
+
+  let stack: SupportedStack | undefined;
+  if (options.stack !== undefined) {
+    if (!isSupportedStack(options.stack)) {
+      throw new HarnessConfigError(
+        `request: stack must be one of: ${supportedStacks.join(", ")}.`,
+      );
+    }
+    stack = options.stack;
+  } else {
+    stack = profile.defaults.stack;
+  }
+
+  if (stack === undefined) {
+    throw new HarnessConfigError(
+      "request: stack is required when the selected profile has no default stack.",
+    );
+  }
+
+  return {
+    allowedDependencies: moduleMetadata.allowedDependencies,
+    examples: profile.examples,
+    heuristics: profile.heuristics,
+    modules: moduleMetadata.modules,
+    policies: profile.policies,
+    principles: profile.principles,
+    profile: profile.profile,
+    project: options.project,
+    schemaVersion: 1,
+    stack,
+    targets: mergeTargets(profile.defaults.targets, harnessTargets),
+    workflows: profile.workflows,
+  };
+}
+
+export type HarnessReference = {
+  modules: string;
+  profile: { name: string; version: string };
+  project: { name: string };
+  stack?: string;
+  targets?: Record<string, boolean>;
+};
+
+export function parseHarnessFromYaml(source: string, displayPath = "harness.yml"): HarnessReference {
+  const document = parseDocument(source);
+  if (document.errors.length > 0) {
+    const firstError = document.errors[0];
+    throw new HarnessConfigError(
+      `${displayPath}: invalid YAML${firstError?.message === undefined ? "." : `: ${firstError.message}`}`,
+    );
+  }
+  const harness = parseHarnessConfig(document.toJS(), { filePath: displayPath });
+
+  const ref: HarnessReference = {
+    modules: harness.modules,
+    profile: { name: harness.profile.name, version: harness.profile.version },
+    project: { name: harness.project.name },
+  };
+  if (harness.stack !== undefined) ref.stack = harness.stack;
+  if (Object.keys(harness.targets).length > 0) ref.targets = harness.targets;
+  return ref;
 }
 
 export function serializeEffectiveHarnessModel(model: EffectiveHarnessModel): string {
