@@ -140,7 +140,7 @@ describe("runCli", () => {
     expect(exitCode).toBe(1);
     expect(writes.stdout).toBe("");
     expect(writes.stderr).toBe(
-      "--project requires a directory.\nRun `architect-companion --help` for usage.\n",
+      "--project requires a value.\nRun `architect-companion --help` for usage.\n",
     );
   });
 

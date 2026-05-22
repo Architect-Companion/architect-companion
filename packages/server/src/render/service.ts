@@ -6,6 +6,7 @@ import { buildEffectiveHarnessModel, HarnessConfigError } from "@architect-compa
 import { findProfile } from "../profiles/service.js";
 import {
   AgentsMdRenderer,
+  ClaudeCodeRenderer,
   CursorRenderer,
   DependencyCruiserRenderer,
   GithubActionsRenderer,
@@ -17,6 +18,7 @@ const artifactsDir = join(dataDir, "artifacts");
 
 const renderers = [
   new AgentsMdRenderer(),
+  new ClaudeCodeRenderer(),
   new CursorRenderer(),
   new DependencyCruiserRenderer(),
   new GithubActionsRenderer(),

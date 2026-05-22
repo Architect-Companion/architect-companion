@@ -2,45 +2,147 @@
 
 Architect Companion is an opinionated harness for architecture-aware agentic software engineering.
 
-It provides reusable instructions, workflows, architecture metadata, and checks that help AI-assisted development follow a team's architectural standards.
+It provides reusable architecture profiles, renders tool-specific artifacts (AGENTS.md, Cursor rules, Claude Code skills, GitHub Actions, dependency-cruiser configs), and exposes a CLI and server for integrating these into any project.
 
-## What It Provides
+## Architecture
 
-- Agent instruction templates such as `AGENTS.md`, `CLAUDE.md`, Cursor rules, and Copilot instructions.
-- Architecture metadata for boundaries, components, ownership, risks, and exceptions.
-- Reusable workflows for planning, implementation, review, refactoring, dependency changes, and ADR creation.
-- Executable checks that can run locally and in CI.
-- Adapter layers for MCP, hooks, skills, slash commands, and plugins.
+```
+packages/
+  core/    — profile parser, effective model builder (shared)
+  cli/     — architect-companion CLI (init, pull, inspect)
+  server/  — Fastify API server (profiles, render, artifacts)
+  ui/      — Next.js management UI (profile library, projects)
+```
 
-## Status
+The server stores profiles and rendered artifacts. The CLI reads a project's `.architect-companion/harness.yml`, calls the render API, and writes artifacts to the correct locations based on the detected tooling.
 
-This repository is in the product-definition stage. The current focus is to define the harness model, document the architectural defaults, and shape the first usable CLI and template set.
+## Installing the CLI Locally
+
+### Prerequisites
+
+- Node.js 22.13 or newer
+- npm
+
+### 1 — Clone and build
+
+```bash
+git clone https://github.com/embarc-de/architect-companion.git
+cd architect-companion
+
+npm ci
+npm run build   # builds core → cli → server in order
+```
+
+### 2 — Link the CLI globally
+
+```bash
+npm link -w packages/cli
+```
+
+Verify:
+
+```bash
+architect-companion --version
+architect-companion --help
+```
+
+### 3 — Start the server
+
+```bash
+npm start -w packages/server          # production (port 3000)
+# or
+npm run dev -w packages/server        # watch mode (rebuilds on change)
+```
+
+The server URL can be overridden with the `AC_SERVER_URL` environment variable (default: `http://localhost:3000`).
+
+### 4 — (Optional) Start the management UI
+
+```bash
+npm run dev -w packages/ui            # http://localhost:3001
+```
+
+Use the UI to upload architecture profiles before running `init` in a project.
+
+---
+
+## Using the CLI in a Project
+
+### Set up a project harness
+
+Create `.architect-companion/harness.yml` in your project root:
+
+```yaml
+schemaVersion: 1
+profile:
+  name: modular-monolith
+  version: 0.1.0
+project:
+  name: my-project         # overridden by git remote name at runtime
+modules: architecture/modules.yml
+```
+
+Create `.architect-companion/architecture/modules.yml`:
+
+```yaml
+schemaVersion: 1
+modules:
+  - name: identity
+    path: src/modules/identity
+    public_api: src/modules/identity/index.ts
+  - name: billing
+    path: src/modules/billing
+    public_api: src/modules/billing/index.ts
+allowed_dependencies:
+  billing:
+    - identity
+```
+
+### Render artifacts on the server
+
+Run from inside your project (git root is detected automatically):
+
+```bash
+architect-companion init
+```
+
+This reads `harness.yml`, calls `POST /api/render`, and stores the artifacts on the server.
+
+### Apply artifacts to the project
+
+```bash
+architect-companion pull
+```
+
+This downloads all rendered artifacts and writes them to the correct locations based on detected tooling:
+
+| Detected | Written |
+|---|---|
+| Always | `AGENTS.md`, `.dependency-cruiser.cjs` |
+| `.github/` or GitHub remote | `.github/workflows/architect-check.yml` |
+| `.claude/` or `CLAUDE.md` | `.claude/skills/<module>/skill.md` |
+| `.cursor/` | `.cursor/rules/<module>.mdc` |
+
+The project name is derived automatically from `git remote get-url origin`.
+
+### Inspect the effective model (local, no server needed)
+
+```bash
+architect-companion inspect effective-model
+architect-companion inspect effective-model --project ./path/to/project
+```
+
+---
 
 ## Development
 
-Architect Companion uses Node.js 22.13 or newer and npm.
-
 ```bash
 npm ci
-npm run check
-npm run build
-node dist/cli.js --help
+npm run build -w packages/core
+npm run build -w packages/cli
+npm run build -w packages/server
+npm test -w packages/core
+npm test -w packages/cli
 ```
 
-The CLI exposes `architect-companion --help`, `architect-companion --version`, and `architect-companion inspect effective-model` for validating harness inputs and printing the resolved model.
-
-## Repository Contents
-
-- [AGENTS.md](AGENTS.md): guidance for AI agents working in this repository
-- [docs/README.md](docs/README.md): documentation overview and reading guide
-- [docs/roadmap.md](docs/roadmap.md): iterative implementation roadmap
-- [docs/product-thesis.md](docs/product-thesis.md): product thesis and design rationale
-- [docs/harness-model.md](docs/harness-model.md): tool-independent harness model and target rendering approach
-- [docs/architecture-knowledge.md](docs/architecture-knowledge.md): where architectural knowledge is encoded
-- [docs/profile-model.md](docs/profile-model.md): how reusable architecture profiles are structured
-- [docs/rendering-and-checks.md](docs/rendering-and-checks.md): deterministic rendering, CI adapters, and check orchestration
-- [docs/glossary.md](docs/glossary.md): shared terminology for the project
-- [docs/decisions](docs/decisions): accepted architecture and product decisions
-- [profiles/modular-monolith](profiles/modular-monolith): initial placeholder for the modular monolith profile
-
-See [docs/product-thesis.md](docs/product-thesis.md) for the current thinking.
+The `data/` directory holds profiles and artifacts at runtime and is gitignored below the top-level subdirectories.
