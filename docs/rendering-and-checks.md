@@ -115,6 +115,8 @@ architect-companion render --check
 
 That command should fail when generated files are stale.
 
+The current rendering slice supports full-file generation for `AGENTS.md` and Cursor rules. Targets for external analysis tools and CI are intentionally left for the dependency-cruiser and CI adapter iterations.
+
 ## CI Rendering
 
 CI configuration should be rendered from the harness.

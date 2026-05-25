@@ -17,7 +17,7 @@ describe("renderGitHubActionsWorkflow", () => {
       projectDir: sampleProjectDir,
     });
 
-    const workflow = renderGitHubActionsWorkflow(model);
+    const workflow = renderGitHubActionsWorkflow(withDependencyCruiserEnabled(model));
 
     expect(workflow.path).toBe(GITHUB_ACTIONS_WORKFLOW_PATH);
     expect(workflow.contents)
@@ -81,3 +81,15 @@ jobs:
     expect(workflow.contents).not.toContain("depcruise");
   });
 });
+
+function withDependencyCruiserEnabled(
+  model: Awaited<ReturnType<typeof loadEffectiveHarnessModel>>,
+): Awaited<ReturnType<typeof loadEffectiveHarnessModel>> {
+  return {
+    ...model,
+    targets: {
+      ...model.targets,
+      dependencyCruiser: true,
+    },
+  };
+}

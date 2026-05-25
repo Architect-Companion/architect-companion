@@ -14,7 +14,7 @@ describe("getArchitectureCheckCommands", () => {
       projectDir: sampleProjectDir,
     });
 
-    expect(getArchitectureCheckCommands(model)).toEqual([
+    expect(getArchitectureCheckCommands(withDependencyCruiserEnabled(model))).toEqual([
       {
         id: "dependency-cruiser",
         name: "Run dependency-cruiser architecture checks",
@@ -56,20 +56,34 @@ describe("getArchitectureCheckCommands", () => {
     });
 
     expect(
-      getArchitectureCheckCommands({
-        ...model,
-        modules: model.modules.map((module) =>
-          module.name === "billing"
-            ? {
-                ...module,
-                path: "src/modules/billing core",
-                publicApi: "src/modules/billing core/index.ts",
-              }
-            : module,
-        ),
-      })[0]?.run,
+      getArchitectureCheckCommands(
+        withDependencyCruiserEnabled({
+          ...model,
+          modules: model.modules.map((module) =>
+            module.name === "billing"
+              ? {
+                  ...module,
+                  path: "src/modules/billing core",
+                  publicApi: "src/modules/billing core/index.ts",
+                }
+              : module,
+          ),
+        }),
+      )[0]?.run,
     ).toBe(
       "npx --no-install depcruise --config .dependency-cruiser.cjs 'src/modules/billing core' src/modules/identity",
     );
   });
 });
+
+function withDependencyCruiserEnabled(
+  model: Awaited<ReturnType<typeof loadEffectiveHarnessModel>>,
+): Awaited<ReturnType<typeof loadEffectiveHarnessModel>> {
+  return {
+    ...model,
+    targets: {
+      ...model.targets,
+      dependencyCruiser: true,
+    },
+  };
+}

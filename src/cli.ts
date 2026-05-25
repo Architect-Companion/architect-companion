@@ -9,12 +9,14 @@ import {
   loadEffectiveHarnessModel,
   serializeEffectiveHarnessModel,
 } from "./model/effective-model.js";
+import { renderEffectiveHarnessModel, RenderError } from "./render/render.js";
 
 export const HELP_TEXT = `Architect Companion
 
 Usage:
   architect-companion [options]
   architect-companion inspect effective-model [--project <dir>] [--profiles <dir>]
+  architect-companion render [--project <dir>] [--profiles <dir>] [--check]
 
 Options:
   -h, --help          Show this help message.
@@ -23,6 +25,8 @@ Options:
 Commands:
   inspect effective-model
       Validate the harness inputs and print the resolved effective model as JSON.
+  render
+      Generate deterministic target files from the resolved effective model.
 `;
 
 type Writable = {
@@ -58,6 +62,22 @@ type InspectOptionsResult =
       success: false;
     };
 
+type RenderOptions = {
+  check: boolean;
+  profilesDir: string;
+  projectDir: string;
+};
+
+type RenderOptionsResult =
+  | {
+      options: RenderOptions;
+      success: true;
+    }
+  | {
+      message: string;
+      success: false;
+    };
+
 export async function runCli(args: string[], io: CliIo, options: CliOptions): Promise<number> {
   const firstArg = args[0];
 
@@ -76,6 +96,10 @@ export async function runCli(args: string[], io: CliIo, options: CliOptions): Pr
 
   if (firstArg === "inspect") {
     return runInspectCommand(args.slice(1), io, options);
+  }
+
+  if (firstArg === "render") {
+    return runRenderCommand(args.slice(1), io, options);
   }
 
   io.stderr.write(`Unknown argument: ${firstArg ?? ""}\n`);
@@ -154,6 +178,54 @@ async function runInspectCommand(args: string[], io: CliIo, options: CliOptions)
   }
 }
 
+async function runRenderCommand(args: string[], io: CliIo, options: CliOptions): Promise<number> {
+  const parsedOptions = parseRenderOptions(args, options);
+  if (!parsedOptions.success) {
+    io.stderr.write(`${parsedOptions.message}\n`);
+    io.stderr.write("Run `architect-companion --help` for usage.\n");
+    return 1;
+  }
+
+  try {
+    const model = await loadEffectiveHarnessModel(parsedOptions.options);
+    const results = await renderEffectiveHarnessModel({
+      check: parsedOptions.options.check,
+      model,
+      projectDir: parsedOptions.options.projectDir,
+    });
+
+    const staleResults = results.filter((result) => result.status === "stale");
+    if (staleResults.length > 0) {
+      for (const result of staleResults) {
+        io.stderr.write(`${result.outputPath} is stale (${result.reason}).\n`);
+      }
+      return 1;
+    }
+
+    if (parsedOptions.options.check) {
+      io.stdout.write("Generated targets are fresh.\n");
+      return 0;
+    }
+
+    if (results.length === 0) {
+      io.stdout.write("No targets selected.\n");
+      return 0;
+    }
+
+    for (const result of results) {
+      io.stdout.write(`${result.status} ${result.outputPath}\n`);
+    }
+    return 0;
+  } catch (error: unknown) {
+    if (error instanceof HarnessConfigError || error instanceof RenderError) {
+      io.stderr.write(`${error.message}\n`);
+      return 1;
+    }
+
+    throw error;
+  }
+}
+
 function parseInspectOptions(args: string[], options: CliOptions): InspectOptionsResult {
   const cwd = options.cwd ?? process.cwd();
   let projectDir = cwd;
@@ -193,6 +265,59 @@ function parseInspectOptions(args: string[], options: CliOptions): InspectOption
 
   return {
     options: {
+      profilesDir,
+      projectDir,
+    },
+    success: true,
+  };
+}
+
+function parseRenderOptions(args: string[], options: CliOptions): RenderOptionsResult {
+  const cwd = options.cwd ?? process.cwd();
+  let check = false;
+  let projectDir = cwd;
+  let profilesDir = options.profilesDir;
+
+  for (let index = 0; index < args.length; index += 1) {
+    const flag = args[index];
+    const value = args[index + 1];
+
+    if (flag === "--check") {
+      check = true;
+      continue;
+    }
+
+    if (flag === "--project") {
+      const optionValue = parseDirectoryOptionValue("--project", value);
+      if (!optionValue.success) {
+        return optionValue;
+      }
+
+      projectDir = resolve(cwd, optionValue.value);
+      index += 1;
+      continue;
+    }
+
+    if (flag === "--profiles") {
+      const optionValue = parseDirectoryOptionValue("--profiles", value);
+      if (!optionValue.success) {
+        return optionValue;
+      }
+
+      profilesDir = resolve(cwd, optionValue.value);
+      index += 1;
+      continue;
+    }
+
+    return {
+      message: `Unknown argument: ${flag ?? ""}`,
+      success: false,
+    };
+  }
+
+  return {
+    options: {
+      check,
       profilesDir,
       projectDir,
     },

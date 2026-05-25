@@ -2,13 +2,18 @@ import { readFile } from "node:fs/promises";
 import path, { posix } from "node:path";
 import { parseDocument } from "yaml";
 
-const knownTargetKeys = ["agentsMd", "cursor", "dependencyCruiser", "githubActions"] as const;
+export const knownTargetKeys = [
+  "agentsMd",
+  "cursor",
+  "dependencyCruiser",
+  "githubActions",
+] as const;
 const supportedStacks = ["typescript"] as const;
 const supportedPolicySeverities = ["advisory", "warning", "error"] as const;
 const supportedPolicyEngines = ["dependency-cruiser"] as const;
 const supportedPolicyRenderers = ["dependency-cruiser-config"] as const;
 
-type KnownTargetKey = (typeof knownTargetKeys)[number];
+export type KnownTargetKey = (typeof knownTargetKeys)[number];
 type SupportedStack = (typeof supportedStacks)[number];
 type PolicySeverity = (typeof supportedPolicySeverities)[number];
 type PolicyEngine = (typeof supportedPolicyEngines)[number];

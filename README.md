@@ -27,7 +27,7 @@ npm run build
 node dist/cli.js --help
 ```
 
-The CLI exposes `architect-companion --help`, `architect-companion --version`, and `architect-companion inspect effective-model` for validating harness inputs and printing the resolved model.
+The CLI exposes `architect-companion --help`, `architect-companion --version`, `architect-companion inspect effective-model`, `architect-companion render`, and `architect-companion render --check`.
 
 ## Repository Contents
 

@@ -8,9 +8,9 @@ defaults:
   stack: typescript
   targets:
     agentsMd: true
-    cursor: true
-    dependencyCruiser: true
-    githubActions: true
+    cursor: false
+    dependencyCruiser: false
+    githubActions: false
 principles:
   - id: module-ownership
     title: Modules own behavior behind public APIs

@@ -95,7 +95,7 @@ describe("loadEffectiveHarnessModel", () => {
   "targets": {
     "agentsMd": true,
     "cursor": false,
-    "dependencyCruiser": true,
+    "dependencyCruiser": false,
     "githubActions": false
   },
   "workflows": [
