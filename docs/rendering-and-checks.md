@@ -136,6 +136,47 @@ CI platform
 
 This keeps platform renderers thin.
 
+## MVP GitHub Actions Adapter
+
+The MVP GitHub Actions target renders `.github/workflows/architecture.yml`.
+
+The generated workflow is intentionally thin:
+
+1. Check out the repository.
+2. Set up Node.js 22.x with npm caching.
+3. Install dependencies with `npm ci`.
+4. Run `architect-companion render --check` to detect stale generated targets.
+5. Run any selected external architecture engine.
+
+The GitHub Actions renderer should not know the details of every external
+analysis tool. It should consume generic architecture check commands and render
+them as workflow steps. Tool-specific integrations own how their command is
+constructed.
+
+For the TypeScript modular monolith slice, the selected external engine is
+dependency-cruiser. When the dependency-cruiser policy implementation and target
+are both selected, the workflow invokes the project-local binary with:
+
+```bash
+npx --no-install depcruise --config .dependency-cruiser.cjs <module paths>
+```
+
+Local behavior should mirror CI behavior:
+
+```bash
+npm ci
+npx --no-install architect-companion render --check
+npx --no-install depcruise --config .dependency-cruiser.cjs <module paths>
+```
+
+The workflow assumes `architect-companion` and `dependency-cruiser` are available
+as project dependencies when their corresponding steps are selected. Missing
+tools should fail in CI rather than silently downloading unpinned packages.
+
+Projects can still render the GitHub Actions target without dependency-cruiser.
+In that case, the workflow runs harness-owned checks such as
+`architect-companion render --check` and omits the dependency-cruiser step.
+
 ## Check Command
 
 `architect-companion check` should not be a prompt to an AI agent.
@@ -269,7 +310,7 @@ allowed_dependencies:
 
 - `AGENTS.md` guidance for AI agents
 - `.cursor/rules/*.mdc` for Cursor
-- `.dependency-cruiser.js` for dependency-cruiser
+- `.dependency-cruiser.cjs` for dependency-cruiser
 - `.github/workflows/architecture.yml` for GitHub Actions
 
 If code imports an internal file from another module, dependency-cruiser catches it. Architect Companion did not reimplement dependency analysis; it encoded the architectural intent, generated the tool configuration, and wired it into the development workflow.
