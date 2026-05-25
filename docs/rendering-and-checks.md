@@ -192,6 +192,47 @@ policies:
 
 Architect Companion can then render the right tool configs and normalize the results into a consistent report.
 
+## Dependency-Cruiser Integration Contract
+
+The TypeScript modular-monolith MVP uses dependency-cruiser as the first external analysis engine.
+
+The profile declares the implementation contract on an executable policy:
+
+```yaml
+implementation:
+  typescript:
+    engine: dependency-cruiser
+    renderer: dependency-cruiser-config
+```
+
+For the MVP, `module-boundaries` is the only policy with this contract. The dependency-cruiser adapter consumes:
+
+- project modules
+- each module path
+- each module public API path
+- `allowed_dependencies`
+- the policy severity
+
+It renders `.dependency-cruiser.cjs` with generated `forbidden` rules. Two rule kinds are generated:
+
+- undeclared module dependency: a module imports another module that is not listed in `allowed_dependencies`
+- internal module import: a module imports an allowed dependency through any file other than that dependency's public API
+
+The command metadata for the external tool is:
+
+```text
+depcruise --config .dependency-cruiser.cjs --output-type json <module paths>
+```
+
+The JSON output is mapped into an Architect Companion result shape with:
+
+- `engine`
+- `ok`, which is `true` only when no normalized violations are present
+- summary counts for `error`, `warning`, and `advisory`
+- normalized violations with `policyId`, `ruleName`, `severity`, `from`, `to`, and `message`
+
+The future `check` command should own final exit-code behavior after mapping dependency-cruiser JSON. That keeps external-tool orchestration separate from static analysis and leaves CI adapters free to call Architect Companion instead of duplicating policy logic.
+
 ## Example
 
 A TypeScript modular monolith profile may include a module boundary policy:

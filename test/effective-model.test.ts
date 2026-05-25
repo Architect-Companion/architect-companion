@@ -61,7 +61,7 @@ describe("loadEffectiveHarnessModel", () => {
   ],
   "policies": [
     {
-      "guidance": "Cross-module imports should target the public_api path declared for the dependency module. Imports from another module's internal files are boundary violations unless the dependency is redesigned or a documented exception is introduced.",
+      "guidance": "Cross-module imports must be declared in allowed_dependencies and target the public_api path declared for the dependency module. Imports from another module's internal files, or from undeclared module dependencies, are boundary violations unless the dependency is redesigned or a documented exception is introduced.",
       "id": "module-boundaries",
       "implementation": {
         "typescript": {
@@ -69,7 +69,7 @@ describe("loadEffectiveHarnessModel", () => {
           "renderer": "dependency-cruiser-config"
         }
       },
-      "intent": "Modules may import another module only through its public API.",
+      "intent": "Modules may import another module only when declared in allowed_dependencies and through that module's public API.",
       "severity": "error",
       "title": "Module boundaries"
     }

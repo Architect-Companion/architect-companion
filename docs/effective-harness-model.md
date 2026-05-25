@@ -24,9 +24,9 @@ principles:
 policies:
   - id: module-boundaries
     title: Module boundaries
-    intent: Modules may import another module only through its public API.
+    intent: Modules may import another module only when declared in allowed_dependencies and through that module's public API.
     severity: error
-    guidance: Cross-module imports should target the dependency module public API.
+    guidance: Cross-module imports must be declared in allowed_dependencies and target the dependency module public API.
     implementation:
       typescript:
         engine: dependency-cruiser
@@ -109,6 +109,7 @@ Only policies are candidates for future executable checks. The other sections ar
 - Policy implementation metadata supports `typescript` with `dependency-cruiser` and `dependency-cruiser-config`.
 - Module names must be unique.
 - `allowed_dependencies` keys and values must reference known modules.
+- `allowed_dependencies` is interpreted as a strict module dependency allowlist for executable module-boundary checks.
 
 ## Inspect Command
 
