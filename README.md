@@ -27,7 +27,7 @@ npm run build
 node dist/cli.js --help
 ```
 
-The CLI exposes `architect-companion --help`, `architect-companion --version`, `architect-companion inspect effective-model`, `architect-companion render`, and `architect-companion render --check`.
+The CLI exposes `architect-companion --help`, `architect-companion --version`, `architect-companion inspect effective-model`, `architect-companion render`, `architect-companion render --check`, `architect-companion doctor`, and `architect-companion upgrade-profile`.
 
 ## Repository Contents
 

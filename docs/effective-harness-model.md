@@ -126,3 +126,24 @@ architect-companion inspect effective-model --project ./example --profiles ./pro
 ```
 
 The command is read-only. It does not render generated projections or run architecture checks.
+
+## Profile Lock
+
+After the first successful `render`, the effective profile is pinned in
+`.architect-companion/profile.lock.yml`:
+
+```yaml
+schemaVersion: 1
+profile:
+  name: modular-monolith
+  version: 0.1.0
+  contentHash: sha256-<hex digest of profile.yml bytes>
+```
+
+`render` and `render --check` verify this lock against the currently resolved
+profile. A name, version, or content-hash mismatch fails with an upgrade hint.
+`architect-companion upgrade-profile` rewrites the lock once the profile change
+has been reviewed.
+
+See [Decision 0006](decisions/0006-profile-lock-for-adoption.md) for the
+rationale.

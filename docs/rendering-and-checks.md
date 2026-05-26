@@ -183,11 +183,14 @@ In that case, the workflow runs harness-owned checks such as
 
 `architect-companion render --check` is the deterministic verification step the
 MVP offers. It detects stale generated targets without writing any files and
-fails with a non-zero exit code so CI can block on it.
+fails with a non-zero exit code so CI can block on it. As part of the adoption
+hardening iteration it also fails when `.architect-companion/profile.lock.yml`
+is missing or drifts from the resolved profile; see the **Adoption Hardening**
+section below.
 
-Additional harness-owned verifications (for example, exception expiry or
-profile-lock drift detection) are out of scope for the MVP. They can be added
-once concrete cases drive their shape.
+Additional harness-owned verifications (for example, exception expiry) remain
+out of scope for the MVP. They can be added once concrete cases drive their
+shape.
 
 ## Do Not Rebuild Static Analysis Tools
 
@@ -303,10 +306,37 @@ If code imports an internal file from another module, dependency-cruiser catches
 The command semantics should stay clear:
 
 ```text
-render   deterministic compiler from harness to target files (incl. --check)
-review   advisory analysis, potentially AI-assisted (future)
-doctor   environment and integration diagnosis (future)
-explain  human-readable harness context (future)
+render            deterministic compiler from harness to target files (incl. --check)
+doctor            environment and integration diagnosis
+upgrade-profile   rewrite the profile lock after a reviewed profile change
+review            advisory analysis, potentially AI-assisted (future)
+explain           human-readable harness context (future)
 ```
 
 This separation keeps enforceable behavior deterministic while still leaving room for AI-assisted advisory workflows.
+
+## Adoption Hardening
+
+Real repositories need predictable behavior when Architect Companion is added or
+upgraded. The MVP adoption-hardening surface covers four concerns:
+
+- **Conflict messages**: `render` refuses to overwrite files that lack the
+  generated-file marker and reports a remediation hint (move or delete the file,
+  or adopt it by adding the marker). Symlinked output paths fail with the same
+  shape.
+- **Capability warnings**: `render` emits non-fatal warnings when a selected
+  target cannot fully express the harness, for example when the
+  `dependencyCruiser` target is selected without any policy that declares a
+  dependency-cruiser implementation, when an enforceable policy has no engine
+  target, or when `githubActions` is selected without an external architecture
+  engine target.
+- **Missing-tool diagnostics**: `architect-companion doctor` checks that
+  required external tools, such as `depcruise`, are reachable through
+  `node_modules/.bin/`. It also reports the profile lock status and any
+  capability warnings.
+- **Profile lock and upgrade path**: see [Decision 0006](decisions/0006-profile-lock-for-adoption.md).
+
+`render` and `render --check` integrate the lock into the existing freshness
+contract: a missing lock counts as a stale generated artifact in `--check` mode,
+and a stale lock fails both modes. `architect-companion upgrade-profile`
+rewrites the lock when the profile has been intentionally changed.
