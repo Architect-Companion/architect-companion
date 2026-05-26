@@ -38,7 +38,7 @@ The CLI exposes `architect-companion --help`, `architect-companion --version`, `
 - [docs/harness-model.md](docs/harness-model.md): tool-independent harness model and target rendering approach
 - [docs/architecture-knowledge.md](docs/architecture-knowledge.md): where architectural knowledge is encoded
 - [docs/profile-model.md](docs/profile-model.md): how reusable architecture profiles are structured
-- [docs/rendering-and-checks.md](docs/rendering-and-checks.md): deterministic rendering, CI adapters, and check orchestration
+- [docs/rendering-and-checks.md](docs/rendering-and-checks.md): deterministic rendering, CI adapters, and the boundary between deterministic checks and AI-assisted review
 - [docs/glossary.md](docs/glossary.md): shared terminology for the project
 - [docs/decisions](docs/decisions): accepted architecture and product decisions
 - [profiles/modular-monolith](profiles/modular-monolith): initial placeholder for the modular monolith profile

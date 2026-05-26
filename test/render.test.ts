@@ -190,7 +190,7 @@ stale
     }
   });
 
-  it("fails clearly when a selected target does not have a renderer yet", async () => {
+  it("renders the dependency-cruiser config when its target is selected", async () => {
     const projectDir = copySampleProject();
     writeHarness(
       projectDir,
@@ -203,9 +203,50 @@ stale
 
     try {
       const model = await loadEffectiveHarnessModel({ profilesDir, projectDir });
-      await expect(renderEffectiveHarnessModel({ model, projectDir })).rejects.toThrow(
-        /dependencyCruiser does not have a renderer yet/,
+      const results = await renderEffectiveHarnessModel({ model, projectDir });
+
+      expect(results).toEqual([
+        {
+          outputPath: ".dependency-cruiser.cjs",
+          status: "created",
+          target: "dependencyCruiser",
+        },
+      ]);
+      const contents = readFileSync(join(projectDir, ".dependency-cruiser.cjs"), "utf8");
+      expect(contents).toContain(GENERATED_FILE_MARKER);
+      expect(contents).toContain(
+        "architect-companion/module-boundaries/billing-to-identity/internal-import",
       );
+    } finally {
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+
+  it("renders the GitHub Actions workflow when its target is selected", async () => {
+    const projectDir = copySampleProject();
+    writeHarness(
+      projectDir,
+      `targets:
+  agentsMd: false
+  cursor: false
+  githubActions: true
+`,
+    );
+
+    try {
+      const model = await loadEffectiveHarnessModel({ profilesDir, projectDir });
+      const results = await renderEffectiveHarnessModel({ model, projectDir });
+
+      expect(results).toEqual([
+        {
+          outputPath: ".github/workflows/architecture.yml",
+          status: "created",
+          target: "githubActions",
+        },
+      ]);
+      const contents = readFileSync(join(projectDir, ".github/workflows/architecture.yml"), "utf8");
+      expect(contents).toContain(GENERATED_FILE_MARKER);
+      expect(contents).toContain("run: npx --no-install architect-companion render --check");
     } finally {
       rmSync(projectDir, { force: true, recursive: true });
     }

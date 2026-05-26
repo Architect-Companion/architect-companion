@@ -14,7 +14,7 @@ Read the documents that match the task at hand:
 - [Effective Harness Model](effective-harness-model.md): schemas, merge rules, validation rules, and inspect command.
 - [Profile Model](profile-model.md): reusable architecture profiles and project-specific harness instances.
 - [Architecture Knowledge](architecture-knowledge.md): where architectural knowledge is encoded.
-- [Rendering And Checks](rendering-and-checks.md): deterministic rendering, CI adapters, check orchestration, and the boundary between checks and AI-assisted review.
+- [Rendering And Checks](rendering-and-checks.md): deterministic rendering, CI adapters, and the boundary between deterministic checks and AI-assisted review.
 - [Glossary](glossary.md): shared terminology.
 - [Decisions](decisions): accepted architecture and product decisions.
 
@@ -51,4 +51,4 @@ For decisions that should remain stable across future discussions, read:
 
 1. [0001. Agent-Neutral Harness](decisions/0001-agent-neutral-harness.md)
 2. [0002. Deterministic Rendering](decisions/0002-deterministic-rendering.md)
-3. [0003. Checks Orchestrate Existing Tools](decisions/0003-checks-orchestrate-existing-tools.md)
+3. [0003. Render Wires Existing Tools Into CI](decisions/0003-checks-orchestrate-existing-tools.md)

@@ -80,19 +80,15 @@ Examples:
 
 A deterministic verification step that can pass or fail repeatably.
 
-Checks may validate the harness itself, verify generated projections, or orchestrate existing analysis tools.
+In the MVP, the harness-owned check is `architect-companion render --check`,
+which verifies that generated projections are fresh. External analysis engines
+run as their own CI steps and report their own pass/fail.
 
 ## Architecture Check Command
 
 A concrete command line selected from the effective harness model to run an architecture check.
 
 Architecture check commands are target-neutral. Platform renderers such as GitHub Actions consume them and express them as platform-specific steps.
-
-## Check Command
-
-The future `architect-companion check` CLI command.
-
-It should orchestrate deterministic harness checks and selected external engines, then normalize their output. It should not be an AI-assisted review.
 
 ## Review
 

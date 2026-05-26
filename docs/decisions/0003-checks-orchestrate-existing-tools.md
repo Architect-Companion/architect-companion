@@ -1,4 +1,4 @@
-# 0003. Checks Orchestrate Existing Tools
+# 0003. Render Wires Existing Tools Into CI
 
 ## Status
 
@@ -14,27 +14,23 @@ Examples include ArchUnit, dependency-cruiser, Semgrep, ESLint, Checkstyle, and 
 
 Architect Companion should not become a custom universal static analyzer.
 
-For code analysis, profiles should declare which existing engines implement a policy for a given stack. Architect Companion can render tool configuration, invoke configured tools, and normalize results.
+For code analysis, profiles declare which existing engines implement a policy for a given stack. Architect Companion renders the corresponding tool configuration and renders CI workflow steps that invoke the tool directly.
 
-`architect-companion check` should be:
+The deterministic enforcement chain is:
 
 ```text
-orchestrator + policy interpreter + result normalizer
+render -> tool config + CI step
+CI runner -> invokes the tool -> tool exits non-zero on violations
 ```
 
-It should directly implement only harness-specific checks, such as:
+Architect Companion itself does not orchestrate engines at runtime or normalize their output. Each engine reports its own pass/fail through its own CI step.
 
-- generated targets are fresh
-- required architecture metadata is present
-- selected targets can be rendered
-- profile versions are valid
-- exceptions are not expired
-- policies have implementations for the selected stack
+Harness-owned verification in the MVP is limited to `architect-companion render --check`, which detects stale generated targets.
 
 ## Consequences
 
 - The project avoids rebuilding mature analyzers.
 - Profiles need an engine implementation contract.
-- Platform renderers can stay thin.
-- CI adapters should invoke configured engines or `architect-companion check`.
-- Check output should normalize policy id, severity, location, message, and source engine.
+- Platform renderers stay thin: they express selected architecture-check commands as platform-specific steps.
+- CI configuration carries the orchestration; Architect Companion does not.
+- A normalized cross-engine report is a future advisory concern (likely under a `review` command), not a deterministic check concern.

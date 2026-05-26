@@ -179,22 +179,15 @@ Projects can still render the GitHub Actions target without dependency-cruiser.
 In that case, the workflow runs harness-owned checks such as
 `architect-companion render --check` and omits the dependency-cruiser step.
 
-## Check Command
+## Harness-Owned Verification
 
-`architect-companion check` should not be a prompt to an AI agent.
+`architect-companion render --check` is the deterministic verification step the
+MVP offers. It detects stale generated targets without writing any files and
+fails with a non-zero exit code so CI can block on it.
 
-It should mean deterministic verification.
-
-It can check harness-specific concerns directly:
-
-- generated targets are fresh
-- profile version is valid
-- required architecture metadata is present
-- exceptions are not expired
-- selected targets can be rendered
-- policies have implementations for the selected stack
-
-For code analysis, Architect Companion should prefer existing tools instead of rebuilding them.
+Additional harness-owned verifications (for example, exception expiry or
+profile-lock drift detection) are out of scope for the MVP. They can be added
+once concrete cases drive their shape.
 
 ## Do Not Rebuild Static Analysis Tools
 
@@ -207,21 +200,10 @@ Architect Companion should not become a replacement for tools such as:
 - Checkstyle
 - SonarQube
 
-The better model is:
-
-```text
-architect-companion check
-  = orchestrator + policy interpreter + result normalizer
-```
-
-Not:
-
-```text
-architect-companion check
-  = custom universal static analyzer
-```
-
-Profiles can declare which engines implement which policies:
+Profiles declare which engines implement which policies, and Architect Companion
+renders the right tool configs. The engines themselves run as their own CI
+steps and report their own results. Architect Companion does not orchestrate
+them or normalize their output.
 
 ```yaml
 policies:
@@ -229,11 +211,7 @@ policies:
     engine: dependency-cruiser
   forbidden-patterns:
     engine: semgrep
-  stale-generated-targets:
-    engine: architect-companion
 ```
-
-Architect Companion can then render the right tool configs and normalize the results into a consistent report.
 
 ## Dependency-Cruiser Integration Contract
 
@@ -274,7 +252,10 @@ The JSON output is mapped into an Architect Companion result shape with:
 - summary counts for `error`, `warning`, and `advisory`
 - normalized violations with `policyId`, `ruleName`, `severity`, `from`, `to`, and `message`
 
-The future `check` command should own final exit-code behavior after mapping dependency-cruiser JSON. That keeps external-tool orchestration separate from static analysis and leaves CI adapters free to call Architect Companion instead of duplicating policy logic.
+This result shape is available for future advisory workflows. The MVP does not
+consume it at runtime; the generated GitHub Actions workflow calls
+`depcruise` directly and relies on its own non-zero exit code to block on
+violations.
 
 ## Example
 
@@ -322,11 +303,10 @@ If code imports an internal file from another module, dependency-cruiser catches
 The command semantics should stay clear:
 
 ```text
-render   deterministic compiler from harness to target files
-check    deterministic verification and orchestration
-review   advisory analysis, potentially AI-assisted
-doctor   environment and integration diagnosis
-explain  human-readable harness context
+render   deterministic compiler from harness to target files (incl. --check)
+review   advisory analysis, potentially AI-assisted (future)
+doctor   environment and integration diagnosis (future)
+explain  human-readable harness context (future)
 ```
 
 This separation keeps enforceable behavior deterministic while still leaving room for AI-assisted advisory workflows.

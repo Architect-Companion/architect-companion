@@ -70,13 +70,11 @@ It should not contain:
 
 An initial MVP could provide:
 
-- `architect-companion init`
-- `architect-companion check`
-- `architect-companion review`
+- `architect-companion render` (with `--check` for stale-target detection)
 - generated `AGENTS.md`, `CLAUDE.md`, Cursor rules, and Copilot instructions
 - a small architecture metadata model
 - a few useful policy checks, such as forbidden dependencies or module boundary violations
-- a GitHub Actions workflow
+- a generated GitHub Actions workflow that invokes the selected analysis engines directly
 - one or two complete example repositories
 
 The first useful demo should show an agent being guided by the harness before and during a change, then the same harness checking the result in CI.
