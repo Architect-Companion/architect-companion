@@ -80,19 +80,16 @@ Examples:
 
 A deterministic verification step that can pass or fail repeatably.
 
-Checks may validate the harness itself, verify generated projections, or orchestrate existing analysis tools.
+In the MVP, the harness-owned check is `architect-companion render --check`,
+which verifies that generated projections are fresh and that the profile lock
+matches the resolved profile. External analysis engines run as their own CI
+steps and report their own pass/fail.
 
 ## Architecture Check Command
 
 A concrete command line selected from the effective harness model to run an architecture check.
 
 Architecture check commands are target-neutral. Platform renderers such as GitHub Actions consume them and express them as platform-specific steps.
-
-## Check Command
-
-The future `architect-companion check` CLI command.
-
-It should orchestrate deterministic harness checks and selected external engines, then normalize their output. It should not be an AI-assisted review.
 
 ## Review
 
@@ -150,3 +147,15 @@ The format-specific details needed to express harness intent in a particular tar
 Opinionated judgment about what good architecture and good agentic engineering practice look like in a given context.
 
 Architectural taste is encoded in profiles, policies, workflows, heuristics, examples, and exception models.
+
+## Profile Lock
+
+`.architect-companion/profile.lock.yml` records the resolved profile name,
+version, and a SHA-256 hash of the profile content. Architect Companion uses the
+lock to detect profile drift and to make profile upgrades explicit.
+
+## Capability Warning
+
+A non-fatal diagnostic from `render` or `doctor` that reports a gap between
+selected targets, declared policies, and available implementations. Capability
+warnings do not block rendering; they make adoption gaps visible.

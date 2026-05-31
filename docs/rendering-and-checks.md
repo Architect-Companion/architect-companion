@@ -179,22 +179,18 @@ Projects can still render the GitHub Actions target without dependency-cruiser.
 In that case, the workflow runs harness-owned checks such as
 `architect-companion render --check` and omits the dependency-cruiser step.
 
-## Check Command
+## Harness-Owned Verification
 
-`architect-companion check` should not be a prompt to an AI agent.
+`architect-companion render --check` is the deterministic verification step the
+MVP offers. It detects stale generated targets without writing any files and
+fails with a non-zero exit code so CI can block on it. As part of the adoption
+hardening iteration it also fails when `.architect-companion/profile.lock.yml`
+is missing or drifts from the resolved profile; see the **Adoption Hardening**
+section below.
 
-It should mean deterministic verification.
-
-It can check harness-specific concerns directly:
-
-- generated targets are fresh
-- profile version is valid
-- required architecture metadata is present
-- exceptions are not expired
-- selected targets can be rendered
-- policies have implementations for the selected stack
-
-For code analysis, Architect Companion should prefer existing tools instead of rebuilding them.
+Additional harness-owned verifications (for example, exception expiry) remain
+out of scope for the MVP. They can be added once concrete cases drive their
+shape.
 
 ## Do Not Rebuild Static Analysis Tools
 
@@ -207,21 +203,10 @@ Architect Companion should not become a replacement for tools such as:
 - Checkstyle
 - SonarQube
 
-The better model is:
-
-```text
-architect-companion check
-  = orchestrator + policy interpreter + result normalizer
-```
-
-Not:
-
-```text
-architect-companion check
-  = custom universal static analyzer
-```
-
-Profiles can declare which engines implement which policies:
+Profiles declare which engines implement which policies, and Architect Companion
+renders the right tool configs. The engines themselves run as their own CI
+steps and report their own results. Architect Companion does not orchestrate
+them or normalize their output.
 
 ```yaml
 policies:
@@ -229,11 +214,7 @@ policies:
     engine: dependency-cruiser
   forbidden-patterns:
     engine: semgrep
-  stale-generated-targets:
-    engine: architect-companion
 ```
-
-Architect Companion can then render the right tool configs and normalize the results into a consistent report.
 
 ## Dependency-Cruiser Integration Contract
 
@@ -274,7 +255,10 @@ The JSON output is mapped into an Architect Companion result shape with:
 - summary counts for `error`, `warning`, and `advisory`
 - normalized violations with `policyId`, `ruleName`, `severity`, `from`, `to`, and `message`
 
-The future `check` command should own final exit-code behavior after mapping dependency-cruiser JSON. That keeps external-tool orchestration separate from static analysis and leaves CI adapters free to call Architect Companion instead of duplicating policy logic.
+This result shape is available for future advisory workflows. The MVP does not
+consume it at runtime; the generated GitHub Actions workflow calls
+`depcruise` directly and relies on its own non-zero exit code to block on
+violations.
 
 ## Example
 
@@ -322,11 +306,37 @@ If code imports an internal file from another module, dependency-cruiser catches
 The command semantics should stay clear:
 
 ```text
-render   deterministic compiler from harness to target files
-check    deterministic verification and orchestration
-review   advisory analysis, potentially AI-assisted
-doctor   environment and integration diagnosis
-explain  human-readable harness context
+render            deterministic compiler from harness to target files (incl. --check)
+doctor            environment and integration diagnosis
+upgrade-profile   rewrite the profile lock after a reviewed profile change
+review            advisory analysis, potentially AI-assisted (future)
+explain           human-readable harness context (future)
 ```
 
 This separation keeps enforceable behavior deterministic while still leaving room for AI-assisted advisory workflows.
+
+## Adoption Hardening
+
+Real repositories need predictable behavior when Architect Companion is added or
+upgraded. The MVP adoption-hardening surface covers four concerns:
+
+- **Conflict messages**: `render` refuses to overwrite files that lack the
+  generated-file marker and reports a remediation hint (move or delete the file,
+  or adopt it by adding the marker). Symlinked output paths fail with the same
+  shape.
+- **Capability warnings**: `render` emits non-fatal warnings when a selected
+  target cannot fully express the harness, for example when the
+  `dependencyCruiser` target is selected without any policy that declares a
+  dependency-cruiser implementation, when an enforceable policy has no engine
+  target, or when `githubActions` is selected without an external architecture
+  engine target.
+- **Missing-tool diagnostics**: `architect-companion doctor` checks that
+  required external tools, such as `depcruise`, are reachable through
+  `node_modules/.bin/`. It also reports the profile lock status and any
+  capability warnings.
+- **Profile lock and upgrade path**: see [Decision 0006](decisions/0006-profile-lock-for-adoption.md).
+
+`render` and `render --check` integrate the lock into the existing freshness
+contract: a missing lock counts as a stale generated artifact in `--check` mode,
+and a stale lock fails both modes. `architect-companion upgrade-profile`
+rewrites the lock when the profile has been intentionally changed.

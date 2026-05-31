@@ -110,7 +110,7 @@ The first CLI should make the source/target split obvious:
 ```bash
 architect-companion init
 architect-companion render
-architect-companion check
+architect-companion render --check
 architect-companion review
 architect-companion doctor
 architect-companion explain
@@ -120,12 +120,12 @@ Possible meanings:
 
 - `init`: create `.architect-companion/` from a selected profile.
 - `render`: generate target-specific files from the effective harness model.
-- `check`: run deterministic architecture and policy checks.
+- `render --check`: fail when generated targets would change, without writing anything.
 - `review`: review a diff against the harness model.
 - `doctor`: show active targets, missing files, stale generated outputs, and unsupported integrations.
 - `explain`: print relevant harness context for manual use in any agent.
 
-`check` should not become a custom static analyzer. It should validate harness-specific concerns and orchestrate existing tools where possible.
+External analysis tools (dependency-cruiser, Semgrep, ArchUnit, etc.) are not invoked through a dedicated Architect Companion command. `render` writes their configuration and the matching CI step; the CI runner executes them.
 
 Later, the same model can be exposed through:
 
@@ -159,7 +159,7 @@ After that, the user keeps working with their preferred tools:
 - Claude Code reads Claude-specific commands, settings, or instructions.
 - Codex reads `AGENTS.md`, Codex config, hooks, or MCP.
 - Copilot reads custom instructions.
-- CI runs `architect-companion check`.
+- CI runs `architect-companion render --check` and any selected analysis engines as separate steps.
 
 Developers do not have to change their preferred agent for the harness to be useful.
 

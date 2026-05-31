@@ -141,23 +141,7 @@ Exit criteria:
 
 - a pull request can run the generated architecture check in GitHub Actions
 
-### 6. Check Orchestration
-
-Goal: introduce `check` only after the external-tool path is clear.
-
-Deliverables:
-
-- `check` validates harness-specific concerns
-- `check` can verify generated files are fresh
-- `check` can invoke configured external tools
-- normalized output format
-- deterministic exit codes
-
-Exit criteria:
-
-- `architect-companion check` can run the same relevant checks locally and in CI
-
-### 7. Adoption Hardening
+### 6. Adoption Hardening
 
 Goal: handle likely real-repository adoption cases.
 

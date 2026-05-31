@@ -4,11 +4,20 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { computeCapabilityWarnings } from "./diagnostics/capability-warnings.js";
+import { doctorReportHasIssues, formatDoctorReport, runDoctor } from "./diagnostics/doctor.js";
 import {
   HarnessConfigError,
   loadEffectiveHarnessModel,
   serializeEffectiveHarnessModel,
 } from "./model/effective-model.js";
+import {
+  describeProfileLockStaleReason,
+  PROFILE_LOCK_FILE_PATH,
+  ProfileLockError,
+  resolveProfileLockStatus,
+  writeProfileLock,
+} from "./model/profile-lock.js";
 import { renderEffectiveHarnessModel, RenderError } from "./render/render.js";
 
 export const HELP_TEXT = `Architect Companion
@@ -17,6 +26,8 @@ Usage:
   architect-companion [options]
   architect-companion inspect effective-model [--project <dir>] [--profiles <dir>]
   architect-companion render [--project <dir>] [--profiles <dir>] [--check]
+  architect-companion doctor [--project <dir>] [--profiles <dir>]
+  architect-companion upgrade-profile [--project <dir>] [--profiles <dir>]
 
 Options:
   -h, --help          Show this help message.
@@ -27,6 +38,10 @@ Commands:
       Validate the harness inputs and print the resolved effective model as JSON.
   render
       Generate deterministic target files from the resolved effective model.
+  doctor
+      Diagnose adoption issues: missing tools, capability warnings, and profile lock status.
+  upgrade-profile
+      Update .architect-companion/profile.lock.yml to match the currently resolved profile.
 `;
 
 type Writable = {
@@ -47,30 +62,18 @@ type CliOptions = {
 const helpFlags = new Set(["-h", "--help"]);
 const versionFlags = new Set(["-v", "--version"]);
 
-type InspectOptions = {
+type ResolvedDirectoryOptions = {
   profilesDir: string;
   projectDir: string;
 };
 
-type InspectOptionsResult =
-  | {
-      options: InspectOptions;
-      success: true;
-    }
-  | {
-      message: string;
-      success: false;
-    };
-
-type RenderOptions = {
+type RenderOptions = ResolvedDirectoryOptions & {
   check: boolean;
-  profilesDir: string;
-  projectDir: string;
 };
 
-type RenderOptionsResult =
+type DirectoryOptionsResult<T extends ResolvedDirectoryOptions> =
   | {
-      options: RenderOptions;
+      options: T;
       success: true;
     }
   | {
@@ -100,6 +103,14 @@ export async function runCli(args: string[], io: CliIo, options: CliOptions): Pr
 
   if (firstArg === "render") {
     return runRenderCommand(args.slice(1), io, options);
+  }
+
+  if (firstArg === "doctor") {
+    return runDoctorCommand(args.slice(1), io, options);
+  }
+
+  if (firstArg === "upgrade-profile") {
+    return runUpgradeProfileCommand(args.slice(1), io, options);
   }
 
   io.stderr.write(`Unknown argument: ${firstArg ?? ""}\n`);
@@ -157,7 +168,7 @@ async function runInspectCommand(args: string[], io: CliIo, options: CliOptions)
     return 1;
   }
 
-  const parsedOptions = parseInspectOptions(args.slice(1), options);
+  const parsedOptions = parseDirectoryOptions(args.slice(1), options);
   if (!parsedOptions.success) {
     io.stderr.write(`${parsedOptions.message}\n`);
     io.stderr.write("Run `architect-companion --help` for usage.\n");
@@ -188,6 +199,27 @@ async function runRenderCommand(args: string[], io: CliIo, options: CliOptions):
 
   try {
     const model = await loadEffectiveHarnessModel(parsedOptions.options);
+
+    const lockStatus = await resolveProfileLockStatus({
+      model,
+      profilesDir: parsedOptions.options.profilesDir,
+      projectDir: parsedOptions.options.projectDir,
+    });
+
+    if (lockStatus.kind === "stale") {
+      io.stderr.write(
+        `${PROFILE_LOCK_FILE_PATH}: ${describeProfileLockStaleReason(lockStatus)}.\n`,
+      );
+      io.stderr.write(
+        "Run `architect-companion upgrade-profile` after reviewing the profile changes.\n",
+      );
+      return 1;
+    }
+
+    for (const warning of computeCapabilityWarnings(model)) {
+      io.stderr.write(`warning: ${warning.message}\n`);
+    }
+
     const results = await renderEffectiveHarnessModel({
       check: parsedOptions.options.check,
       model,
@@ -195,20 +227,34 @@ async function runRenderCommand(args: string[], io: CliIo, options: CliOptions):
     });
 
     const staleResults = results.filter((result) => result.status === "stale");
-    if (staleResults.length > 0) {
-      for (const result of staleResults) {
-        io.stderr.write(`${result.outputPath} is stale (${result.reason}).\n`);
-      }
-      return 1;
+    const lockMissing = lockStatus.kind === "missing";
+
+    if (parsedOptions.options.check && lockMissing) {
+      io.stderr.write(`${PROFILE_LOCK_FILE_PATH} is stale (missing).\n`);
+    }
+
+    for (const result of staleResults) {
+      io.stderr.write(`${result.outputPath} is stale (${result.reason}).\n`);
     }
 
     if (parsedOptions.options.check) {
+      if (staleResults.length > 0 || lockMissing) {
+        return 1;
+      }
+
       io.stdout.write("Generated targets are fresh.\n");
       return 0;
     }
 
+    if (lockMissing) {
+      await writeProfileLock(parsedOptions.options.projectDir, lockStatus.expected);
+      io.stdout.write(`created ${PROFILE_LOCK_FILE_PATH}\n`);
+    }
+
     if (results.length === 0) {
-      io.stdout.write("No targets selected.\n");
+      if (!lockMissing) {
+        io.stdout.write("No targets selected.\n");
+      }
       return 0;
     }
 
@@ -217,7 +263,11 @@ async function runRenderCommand(args: string[], io: CliIo, options: CliOptions):
     }
     return 0;
   } catch (error: unknown) {
-    if (error instanceof HarnessConfigError || error instanceof RenderError) {
+    if (
+      error instanceof HarnessConfigError ||
+      error instanceof RenderError ||
+      error instanceof ProfileLockError
+    ) {
       io.stderr.write(`${error.message}\n`);
       return 1;
     }
@@ -226,7 +276,86 @@ async function runRenderCommand(args: string[], io: CliIo, options: CliOptions):
   }
 }
 
-function parseInspectOptions(args: string[], options: CliOptions): InspectOptionsResult {
+async function runDoctorCommand(args: string[], io: CliIo, options: CliOptions): Promise<number> {
+  const parsedOptions = parseDirectoryOptions(args, options);
+  if (!parsedOptions.success) {
+    io.stderr.write(`${parsedOptions.message}\n`);
+    io.stderr.write("Run `architect-companion --help` for usage.\n");
+    return 1;
+  }
+
+  try {
+    const model = await loadEffectiveHarnessModel(parsedOptions.options);
+    const report = await runDoctor({
+      model,
+      profilesDir: parsedOptions.options.profilesDir,
+      projectDir: parsedOptions.options.projectDir,
+    });
+    io.stdout.write(formatDoctorReport(report));
+    return doctorReportHasIssues(report) ? 1 : 0;
+  } catch (error: unknown) {
+    if (error instanceof HarnessConfigError || error instanceof ProfileLockError) {
+      io.stderr.write(`${error.message}\n`);
+      return 1;
+    }
+
+    throw error;
+  }
+}
+
+async function runUpgradeProfileCommand(
+  args: string[],
+  io: CliIo,
+  options: CliOptions,
+): Promise<number> {
+  const parsedOptions = parseDirectoryOptions(args, options);
+  if (!parsedOptions.success) {
+    io.stderr.write(`${parsedOptions.message}\n`);
+    io.stderr.write("Run `architect-companion --help` for usage.\n");
+    return 1;
+  }
+
+  try {
+    const model = await loadEffectiveHarnessModel(parsedOptions.options);
+    const lockStatus = await resolveProfileLockStatus({
+      model,
+      profilesDir: parsedOptions.options.profilesDir,
+      projectDir: parsedOptions.options.projectDir,
+    });
+
+    await writeProfileLock(parsedOptions.options.projectDir, lockStatus.expected);
+
+    switch (lockStatus.kind) {
+      case "missing":
+        io.stdout.write(
+          `created ${PROFILE_LOCK_FILE_PATH} for ${lockStatus.expected.profile.name}@${lockStatus.expected.profile.version}\n`,
+        );
+        return 0;
+      case "match":
+        io.stdout.write(
+          `${PROFILE_LOCK_FILE_PATH} already pinned ${lockStatus.expected.profile.name}@${lockStatus.expected.profile.version}; rewrote the lock file.\n`,
+        );
+        return 0;
+      case "stale":
+        io.stdout.write(
+          `upgraded ${PROFILE_LOCK_FILE_PATH} from ${lockStatus.lock.profile.name}@${lockStatus.lock.profile.version} to ${lockStatus.expected.profile.name}@${lockStatus.expected.profile.version}\n`,
+        );
+        return 0;
+    }
+  } catch (error: unknown) {
+    if (error instanceof HarnessConfigError || error instanceof ProfileLockError) {
+      io.stderr.write(`${error.message}\n`);
+      return 1;
+    }
+
+    throw error;
+  }
+}
+
+function parseDirectoryOptions(
+  args: string[],
+  options: CliOptions,
+): DirectoryOptionsResult<ResolvedDirectoryOptions> {
   const cwd = options.cwd ?? process.cwd();
   let projectDir = cwd;
   let profilesDir = options.profilesDir;
@@ -272,7 +401,10 @@ function parseInspectOptions(args: string[], options: CliOptions): InspectOption
   };
 }
 
-function parseRenderOptions(args: string[], options: CliOptions): RenderOptionsResult {
+function parseRenderOptions(
+  args: string[],
+  options: CliOptions,
+): DirectoryOptionsResult<RenderOptions> {
   const cwd = options.cwd ?? process.cwd();
   let check = false;
   let projectDir = cwd;

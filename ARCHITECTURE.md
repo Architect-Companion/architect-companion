@@ -34,16 +34,18 @@ See [`docs/harness-model.md`](docs/harness-model.md) and
 
 ## Component Model
 
-The implementation is a small TypeScript ESM package with five layers.
+The implementation is a small TypeScript ESM package organized as follows.
 
-| Layer        | Path                | Responsibility                                                        |
-| ------------ | ------------------- | --------------------------------------------------------------------- |
-| CLI          | `src/cli.ts`        | Argument parsing, command dispatch, exit codes, error mapping.        |
-| Model        | `src/model/`        | Load, validate, merge profile + harness + module metadata.            |
-| Render       | `src/render/`       | Orchestrate selected renderers, enforce generated-file safety.        |
-| Renderers    | `src/renderers/`    | Target-specific projections (e.g. GitHub Actions workflow).           |
-| Integrations | `src/integrations/` | External-engine adapters (e.g. dependency-cruiser config + commands). |
-| Checks       | `src/checks/`       | Target-neutral architecture check commands consumed by CI renderers.  |
+| Layer        | Path                | Responsibility                                                             |
+| ------------ | ------------------- | -------------------------------------------------------------------------- |
+| CLI          | `src/cli.ts`        | Argument parsing, command dispatch, exit codes, error mapping.             |
+| Model        | `src/model/`        | Load, validate, merge profile + harness + module metadata; profile lock.   |
+| Render       | `src/render/`       | Orchestrate selected renderers, enforce generated-file safety.             |
+| Renderers    | `src/renderers/`    | Target-specific projections (e.g. GitHub Actions workflow).                |
+| Integrations | `src/integrations/` | External-engine adapters (e.g. dependency-cruiser config + commands).      |
+| Checks       | `src/checks/`       | Target-neutral architecture check commands consumed by CI renderers.       |
+| Diagnostics  | `src/diagnostics/`  | Doctor and capability-warning helpers behind the `doctor` command.         |
+| I/O          | `src/io/`           | Shared filesystem safety primitives (path containment, symlink rejection). |
 
 Dependencies flow downward only: renderers and integrations depend on the
 model; the model has no inbound dependency on either. The CLI is the only
@@ -60,11 +62,16 @@ entrypoint that wires them together.
 
 `architect-companion render` (and `render --check`):
 
-1. Resolve the effective model (as above).
+1. Resolve the effective model (as above) and verify the profile lock.
 2. Select renderers whose target is enabled in `model.targets`.
 3. For each renderer, produce content, enforce the generated-file marker, and
    either write the file or (with `--check`) report stale / missing outputs.
 4. Refuse to overwrite any file that does not carry the marker.
+
+`architect-companion doctor` reports adoption diagnostics (profile lock status,
+capability warnings for selected-but-unsupported targets, missing tools).
+`architect-companion upgrade-profile` rewrites the profile lock to the
+currently resolved profile.
 
 External-engine integration (current: dependency-cruiser):
 
@@ -74,7 +81,9 @@ External-engine integration (current: dependency-cruiser):
    `allowed_dependencies`.
 3. The check-command layer emits a target-neutral invocation
    (`npx --no-install depcruise --config .dependency-cruiser.cjs <paths>`).
-4. The GitHub Actions renderer consumes that command and emits a workflow step.
+4. The GitHub Actions renderer consumes that command and emits a workflow step
+   that invokes the engine directly. Architect Companion does not orchestrate
+   engines at runtime.
 
 See [`docs/rendering-and-checks.md`](docs/rendering-and-checks.md).
 
@@ -89,12 +98,19 @@ an ADR.
 - **Deterministic rendering.** No AI in the render path; the same input
   produces the same output. See ADR
   [0002](docs/decisions/0002-deterministic-rendering.md).
-- **Orchestrate, do not rebuild, static analysis.** Profiles declare which
-  existing engine implements a policy for a given stack. See ADR
+- **Render wires existing tools into CI; engines run themselves.** Profiles
+  declare which existing engine implements a policy for a given stack;
+  rendered CI steps invoke the engine directly, and Architect Companion does
+  not orchestrate or normalize engine output at runtime. See ADR
   [0003](docs/decisions/0003-checks-orchestrate-existing-tools.md).
+- **Profile lock pins resolved profile content.** A SHA-256 content hash of
+  the resolved profile is recorded in `.architect-companion/profile.lock.yml`;
+  `render` refuses to run on a stale lock, and `upgrade-profile` is the only
+  way to advance it. See ADR
+  [0005](docs/decisions/0005-profile-lock-for-adoption.md).
 - **Generated-file safety boundary.** Renderers own whole files, generated
   files carry an explicit marker, and unmarked files are never overwritten.
-  See ADR [0005](docs/decisions/0005-generated-file-safety-boundary.md).
+  See ADR [0006](docs/decisions/0006-generated-file-safety-boundary.md).
 
 ## Extension Points
 
@@ -137,7 +153,9 @@ scripts/         developer tooling not shipped to users
 
 The repository implements the MVP vertical slice for a TypeScript modular
 monolith: effective model, modular-monolith profile slice, deterministic
-render, dependency-cruiser integration, and a GitHub Actions adapter. The
-`architect-companion check` command, the project-init flow, and additional
-profiles and renderers are not yet implemented. See
-[`docs/roadmap.md`](docs/roadmap.md) for the full iteration plan.
+render, profile lock, adoption diagnostics, dependency-cruiser integration,
+and a GitHub Actions adapter. A dedicated `architect-companion check` command
+is intentionally out of scope; engines report pass/fail through their own CI
+steps. The project-init flow and additional profiles and renderers are not
+yet implemented. See [`docs/roadmap.md`](docs/roadmap.md) for the full
+iteration plan.
