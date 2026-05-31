@@ -145,5 +145,5 @@ profile. A name, version, or content-hash mismatch fails with an upgrade hint.
 `architect-companion upgrade-profile` rewrites the lock once the profile change
 has been reviewed.
 
-See [Decision 0006](decisions/0006-profile-lock-for-adoption.md) for the
+See [Decision 0005](decisions/0005-profile-lock-for-adoption.md) for the
 rationale.

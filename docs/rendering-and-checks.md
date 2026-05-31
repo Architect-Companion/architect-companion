@@ -115,7 +115,7 @@ architect-companion render --check
 
 That command should fail when generated files are stale.
 
-The current rendering slice supports full-file generation for `AGENTS.md` and Cursor rules. Targets for external analysis tools and CI are intentionally left for the dependency-cruiser and CI adapter iterations.
+Renderers support full-file generation for `AGENTS.md`, Cursor rules, the dependency-cruiser config, and the GitHub Actions workflow.
 
 ## CI Rendering
 
@@ -138,9 +138,9 @@ CI platform
 
 This keeps platform renderers thin.
 
-## MVP GitHub Actions Adapter
+## GitHub Actions Adapter
 
-The MVP GitHub Actions target renders `.github/workflows/architecture.yml`.
+The GitHub Actions target renders `.github/workflows/architecture.yml`.
 
 The generated workflow is intentionally thin:
 
@@ -181,16 +181,14 @@ In that case, the workflow runs harness-owned checks such as
 
 ## Harness-Owned Verification
 
-`architect-companion render --check` is the deterministic verification step the
-MVP offers. It detects stale generated targets without writing any files and
-fails with a non-zero exit code so CI can block on it. As part of the adoption
-hardening iteration it also fails when `.architect-companion/profile.lock.yml`
-is missing or drifts from the resolved profile; see the **Adoption Hardening**
-section below.
+`architect-companion render --check` is the deterministic verification step
+Architect Companion offers. It detects stale generated targets without writing
+any files and fails with a non-zero exit code so CI can block on it. It also
+fails when `.architect-companion/profile.lock.yml` is missing or drifts from
+the resolved profile; see the **Adoption Hardening** section below.
 
-Additional harness-owned verifications (for example, exception expiry) remain
-out of scope for the MVP. They can be added once concrete cases drive their
-shape.
+Additional harness-owned verifications (for example, exception expiry) are not
+in scope today. They can be added once concrete cases drive their shape.
 
 ## Do Not Rebuild Static Analysis Tools
 
@@ -218,7 +216,7 @@ policies:
 
 ## Dependency-Cruiser Integration Contract
 
-The TypeScript modular-monolith MVP uses dependency-cruiser as the first external analysis engine.
+The TypeScript modular monolith uses dependency-cruiser as its external analysis engine.
 
 The profile declares the implementation contract on an executable policy:
 
@@ -229,7 +227,7 @@ implementation:
     renderer: dependency-cruiser-config
 ```
 
-For the MVP, `module-boundaries` is the only policy with this contract. The dependency-cruiser adapter consumes:
+`module-boundaries` is currently the only policy with this contract. The dependency-cruiser adapter consumes:
 
 - project modules
 - each module path
@@ -255,10 +253,10 @@ The JSON output is mapped into an Architect Companion result shape with:
 - summary counts for `error`, `warning`, and `advisory`
 - normalized violations with `policyId`, `ruleName`, `severity`, `from`, `to`, and `message`
 
-This result shape is available for future advisory workflows. The MVP does not
-consume it at runtime; the generated GitHub Actions workflow calls
-`depcruise` directly and relies on its own non-zero exit code to block on
-violations.
+This result shape is available for future advisory workflows. Architect
+Companion does not consume it at runtime today; the generated GitHub Actions
+workflow calls `depcruise` directly and relies on its own non-zero exit code
+to block on violations.
 
 ## Example
 
@@ -318,7 +316,7 @@ This separation keeps enforceable behavior deterministic while still leaving roo
 ## Adoption Hardening
 
 Real repositories need predictable behavior when Architect Companion is added or
-upgraded. The MVP adoption-hardening surface covers four concerns:
+upgraded. The adoption-hardening surface covers four concerns:
 
 - **Conflict messages**: `render` refuses to overwrite files that lack the
   generated-file marker and reports a remediation hint (move or delete the file,
@@ -334,7 +332,7 @@ upgraded. The MVP adoption-hardening surface covers four concerns:
   required external tools, such as `depcruise`, are reachable through
   `node_modules/.bin/`. It also reports the profile lock status and any
   capability warnings.
-- **Profile lock and upgrade path**: see [Decision 0006](decisions/0006-profile-lock-for-adoption.md).
+- **Profile lock and upgrade path**: see [Decision 0005](decisions/0005-profile-lock-for-adoption.md).
 
 `render` and `render --check` integrate the lock into the existing freshness
 contract: a missing lock counts as a stale generated artifact in `--check` mode,

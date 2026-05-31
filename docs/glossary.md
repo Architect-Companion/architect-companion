@@ -80,8 +80,8 @@ Examples:
 
 A deterministic verification step that can pass or fail repeatably.
 
-In the MVP, the harness-owned check is `architect-companion render --check`,
-which verifies that generated projections are fresh and that the profile lock
+The harness-owned check is `architect-companion render --check`, which
+verifies that generated projections are fresh and that the profile lock
 matches the resolved profile. External analysis engines run as their own CI
 steps and report their own pass/fail.
 

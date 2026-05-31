@@ -149,13 +149,10 @@ docs/decisions/  accepted architecture decisions (ADRs)
 scripts/         developer tooling not shipped to users
 ```
 
-## Status And Scope
+## Current Scope
 
-The repository implements the MVP vertical slice for a TypeScript modular
-monolith: effective model, modular-monolith profile slice, deterministic
-render, profile lock, adoption diagnostics, dependency-cruiser integration,
-and a GitHub Actions adapter. A dedicated `architect-companion check` command
-is intentionally out of scope; engines report pass/fail through their own CI
-steps. The project-init flow and additional profiles and renderers are not
-yet implemented. See [`docs/roadmap.md`](docs/roadmap.md) for the full
-iteration plan.
+The harness covers the TypeScript modular monolith: effective model,
+modular-monolith profile, deterministic render, profile lock, adoption
+diagnostics, dependency-cruiser integration, and a GitHub Actions adapter. A
+dedicated `architect-companion check` command is intentionally out of scope;
+engines report pass/fail through their own CI steps.

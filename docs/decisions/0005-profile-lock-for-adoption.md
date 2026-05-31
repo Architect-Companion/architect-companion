@@ -14,9 +14,9 @@ Without an integrity record, a profile content change would silently propagate i
 every consumer on the next install. The renderer would happily produce different
 guidance and tool configuration from the same `harness.yml`.
 
-The adoption-hardening iteration of the MVP roadmap asks for "profile lock behavior"
-and a "basic upgrade path for profile changes" so that teams can adopt Architect
-Companion in real repositories without surprise drift.
+Teams need to be able to adopt Architect Companion in real repositories
+without surprise drift: a profile lock plus a reviewed upgrade path makes
+profile changes explicit instead of silent.
 
 ## Decision
 

@@ -173,7 +173,7 @@ Generated target files should be clearly marked, for example:
 
 The project should decide later whether generated files are fully owned by the renderer or whether they support managed sections inside otherwise hand-written files.
 
-The simpler MVP is full-file generation for files that the harness owns.
+Today the renderer uses full-file generation for files that the harness owns.
 
 ## Design Preference
 
