@@ -32,6 +32,7 @@ The CLI exposes `architect-companion --help`, `architect-companion --version`, `
 ## Repository Contents
 
 - [AGENTS.md](AGENTS.md): guidance for AI agents working in this repository
+- [ARCHITECTURE.md](ARCHITECTURE.md): single-page architecture overview and component map
 - [docs/README.md](docs/README.md): documentation overview and reading guide
 - [docs/roadmap.md](docs/roadmap.md): iterative implementation roadmap
 - [docs/product-thesis.md](docs/product-thesis.md): product thesis and design rationale

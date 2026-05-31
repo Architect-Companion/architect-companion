@@ -1,4 +1,4 @@
-# 0005. Node TypeScript CLI Foundation
+# 0004. Node TypeScript CLI Foundation
 
 ## Status
 
