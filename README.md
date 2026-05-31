@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="Architect Companion logo" width="220" />
+</p>
+
 # Architect Companion
 
 Architect Companion is an opinionated harness for architecture-aware agentic software engineering.
