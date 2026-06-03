@@ -1,0 +1,8 @@
+schemaVersion: 1
+modules:
+  - name: example
+    path: src/example
+    public_api: src/example/index.ts
+# Add your modules here. Each module needs a name, a path, and a public_api entry point.
+# allowed_dependencies:
+#   example: []

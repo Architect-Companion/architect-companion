@@ -1,0 +1,13 @@
+schemaVersion: 1
+profile:
+  name: modular-monolith
+  version: 0.1.0
+project:
+  name: derived-from-git-remote
+stack: typescript
+modules: architecture/modules.yml
+targets:
+  agentsMd: true
+  dependencyCruiser: true
+  cursor: false
+  githubActions: true
