@@ -80,7 +80,16 @@ Examples:
 
 A deterministic verification step that can pass or fail repeatably.
 
-Checks may validate the harness itself, verify generated projections, or orchestrate existing analysis tools.
+The harness-owned check is `architect-companion render --check`, which
+verifies that generated projections are fresh and that the profile lock
+matches the resolved profile. External analysis engines run as their own CI
+steps and report their own pass/fail.
+
+## Architecture Check Command
+
+A concrete command line selected from the effective harness model to run an architecture check.
+
+Architecture check commands are target-neutral. Platform renderers such as GitHub Actions consume them and express them as platform-specific steps.
 
 ## Review
 
@@ -98,6 +107,24 @@ Examples:
 - ESLint
 - Checkstyle
 - SonarQube
+
+## Integration
+
+Architect Companion code that adapts the harness model to an external tool or platform.
+
+Tool integrations know tool-specific details such as config shape, executable names, arguments, and result mapping. Platform integrations know platform-specific mechanics such as GitHub Actions workflow syntax.
+
+## CI Adapter
+
+A renderer or integration that expresses selected checks in a CI platform.
+
+A CI adapter should stay thin: it should render platform mechanics and consume generic architecture check commands instead of duplicating tool-specific orchestration.
+
+## Command Metadata
+
+Structured information describing how to invoke an external engine.
+
+Command metadata can include the executable, arguments, generated config file, input paths, output type, and result mapper.
 
 ## Orchestrator
 
@@ -120,3 +147,15 @@ The format-specific details needed to express harness intent in a particular tar
 Opinionated judgment about what good architecture and good agentic engineering practice look like in a given context.
 
 Architectural taste is encoded in profiles, policies, workflows, heuristics, examples, and exception models.
+
+## Profile Lock
+
+`.architect-companion/profile.lock.yml` records the resolved profile name,
+version, and a SHA-256 hash of the profile content. Architect Companion uses the
+lock to detect profile drift and to make profile upgrades explicit.
+
+## Capability Warning
+
+A non-fatal diagnostic from `render` or `doctor` that reports a gap between
+selected targets, declared policies, and available implementations. Capability
+warnings do not block rendering; they make adoption gaps visible.

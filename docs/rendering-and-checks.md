@@ -115,6 +115,8 @@ architect-companion render --check
 
 That command should fail when generated files are stale.
 
+Renderers support full-file generation for `AGENTS.md`, Cursor rules, the dependency-cruiser config, and the GitHub Actions workflow.
+
 ## CI Rendering
 
 CI configuration should be rendered from the harness.
@@ -136,22 +138,57 @@ CI platform
 
 This keeps platform renderers thin.
 
-## Check Command
+## GitHub Actions Adapter
 
-`architect-companion check` should not be a prompt to an AI agent.
+The GitHub Actions target renders `.github/workflows/architecture.yml`.
 
-It should mean deterministic verification.
+The generated workflow is intentionally thin:
 
-It can check harness-specific concerns directly:
+1. Check out the repository.
+2. Set up Node.js 22.x with npm caching.
+3. Install dependencies with `npm ci`.
+4. Run `architect-companion render --check` to detect stale generated targets.
+5. Run any selected external architecture engine.
 
-- generated targets are fresh
-- profile version is valid
-- required architecture metadata is present
-- exceptions are not expired
-- selected targets can be rendered
-- policies have implementations for the selected stack
+The GitHub Actions renderer should not know the details of every external
+analysis tool. It should consume generic architecture check commands and render
+them as workflow steps. Tool-specific integrations own how their command is
+constructed.
 
-For code analysis, Architect Companion should prefer existing tools instead of rebuilding them.
+For the TypeScript modular monolith slice, the selected external engine is
+dependency-cruiser. When the dependency-cruiser policy implementation and target
+are both selected, the workflow invokes the project-local binary with:
+
+```bash
+npx --no-install depcruise --config .dependency-cruiser.cjs <module paths>
+```
+
+Local behavior should mirror CI behavior:
+
+```bash
+npm ci
+npx --no-install architect-companion render --check
+npx --no-install depcruise --config .dependency-cruiser.cjs <module paths>
+```
+
+The workflow assumes `architect-companion` and `dependency-cruiser` are available
+as project dependencies when their corresponding steps are selected. Missing
+tools should fail in CI rather than silently downloading unpinned packages.
+
+Projects can still render the GitHub Actions target without dependency-cruiser.
+In that case, the workflow runs harness-owned checks such as
+`architect-companion render --check` and omits the dependency-cruiser step.
+
+## Harness-Owned Verification
+
+`architect-companion render --check` is the deterministic verification step
+Architect Companion offers. It detects stale generated targets without writing
+any files and fails with a non-zero exit code so CI can block on it. It also
+fails when `.architect-companion/profile.lock.yml` is missing or drifts from
+the resolved profile; see the **Adoption Hardening** section below.
+
+Additional harness-owned verifications (for example, exception expiry) are not
+in scope today. They can be added once concrete cases drive their shape.
 
 ## Do Not Rebuild Static Analysis Tools
 
@@ -164,21 +201,10 @@ Architect Companion should not become a replacement for tools such as:
 - Checkstyle
 - SonarQube
 
-The better model is:
-
-```text
-architect-companion check
-  = orchestrator + policy interpreter + result normalizer
-```
-
-Not:
-
-```text
-architect-companion check
-  = custom universal static analyzer
-```
-
-Profiles can declare which engines implement which policies:
+Profiles declare which engines implement which policies, and Architect Companion
+renders the right tool configs. The engines themselves run as their own CI
+steps and report their own results. Architect Companion does not orchestrate
+them or normalize their output.
 
 ```yaml
 policies:
@@ -186,11 +212,51 @@ policies:
     engine: dependency-cruiser
   forbidden-patterns:
     engine: semgrep
-  stale-generated-targets:
-    engine: architect-companion
 ```
 
-Architect Companion can then render the right tool configs and normalize the results into a consistent report.
+## Dependency-Cruiser Integration Contract
+
+The TypeScript modular monolith uses dependency-cruiser as its external analysis engine.
+
+The profile declares the implementation contract on an executable policy:
+
+```yaml
+implementation:
+  typescript:
+    engine: dependency-cruiser
+    renderer: dependency-cruiser-config
+```
+
+`module-boundaries` is currently the only policy with this contract. The dependency-cruiser adapter consumes:
+
+- project modules
+- each module path
+- each module public API path
+- `allowed_dependencies`
+- the policy severity
+
+It renders `.dependency-cruiser.cjs` with generated `forbidden` rules. Two rule kinds are generated:
+
+- undeclared module dependency: a module imports another module that is not listed in `allowed_dependencies`
+- internal module import: a module imports an allowed dependency through any file other than that dependency's public API
+
+The command metadata for the external tool is:
+
+```text
+depcruise --config .dependency-cruiser.cjs --output-type json <module paths>
+```
+
+The JSON output is mapped into an Architect Companion result shape with:
+
+- `engine`
+- `ok`, which is `true` only when no normalized violations are present
+- summary counts for `error`, `warning`, and `advisory`
+- normalized violations with `policyId`, `ruleName`, `severity`, `from`, `to`, and `message`
+
+This result shape is available for future advisory workflows. Architect
+Companion does not consume it at runtime today; the generated GitHub Actions
+workflow calls `depcruise` directly and relies on its own non-zero exit code
+to block on violations.
 
 ## Example
 
@@ -228,7 +294,7 @@ allowed_dependencies:
 
 - `AGENTS.md` guidance for AI agents
 - `.cursor/rules/*.mdc` for Cursor
-- `.dependency-cruiser.js` for dependency-cruiser
+- `.dependency-cruiser.cjs` for dependency-cruiser
 - `.github/workflows/architecture.yml` for GitHub Actions
 
 If code imports an internal file from another module, dependency-cruiser catches it. Architect Companion did not reimplement dependency analysis; it encoded the architectural intent, generated the tool configuration, and wired it into the development workflow.
@@ -238,11 +304,37 @@ If code imports an internal file from another module, dependency-cruiser catches
 The command semantics should stay clear:
 
 ```text
-render   deterministic compiler from harness to target files
-check    deterministic verification and orchestration
-review   advisory analysis, potentially AI-assisted
-doctor   environment and integration diagnosis
-explain  human-readable harness context
+render            deterministic compiler from harness to target files (incl. --check)
+doctor            environment and integration diagnosis
+upgrade-profile   rewrite the profile lock after a reviewed profile change
+review            advisory analysis, potentially AI-assisted (future)
+explain           human-readable harness context (future)
 ```
 
 This separation keeps enforceable behavior deterministic while still leaving room for AI-assisted advisory workflows.
+
+## Adoption Hardening
+
+Real repositories need predictable behavior when Architect Companion is added or
+upgraded. The adoption-hardening surface covers four concerns:
+
+- **Conflict messages**: `render` refuses to overwrite files that lack the
+  generated-file marker and reports a remediation hint (move or delete the file,
+  or adopt it by adding the marker). Symlinked output paths fail with the same
+  shape.
+- **Capability warnings**: `render` emits non-fatal warnings when a selected
+  target cannot fully express the harness, for example when the
+  `dependencyCruiser` target is selected without any policy that declares a
+  dependency-cruiser implementation, when an enforceable policy has no engine
+  target, or when `githubActions` is selected without an external architecture
+  engine target.
+- **Missing-tool diagnostics**: `architect-companion doctor` checks that
+  required external tools, such as `depcruise`, are reachable through
+  `node_modules/.bin/`. It also reports the profile lock status and any
+  capability warnings.
+- **Profile lock and upgrade path**: see [Decision 0005](decisions/0005-profile-lock-for-adoption.md).
+
+`render` and `render --check` integrate the lock into the existing freshness
+contract: a missing lock counts as a stale generated artifact in `--check` mode,
+and a stale lock fails both modes. `architect-companion upgrade-profile`
+rewrites the lock when the profile has been intentionally changed.

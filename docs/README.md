@@ -9,12 +9,11 @@ Start with the [Glossary](glossary.md) when terminology is unclear.
 Read the documents that match the task at hand:
 
 - [Product Thesis](product-thesis.md): product framing, scope, and non-goals.
-- [Roadmap](roadmap.md): iterative implementation plan and MVP scope.
 - [Harness Model](harness-model.md): canonical harness, generated targets, and agent-neutral source/target design.
 - [Effective Harness Model](effective-harness-model.md): schemas, merge rules, validation rules, and inspect command.
 - [Profile Model](profile-model.md): reusable architecture profiles and project-specific harness instances.
 - [Architecture Knowledge](architecture-knowledge.md): where architectural knowledge is encoded.
-- [Rendering And Checks](rendering-and-checks.md): deterministic rendering, CI adapters, check orchestration, and the boundary between checks and AI-assisted review.
+- [Rendering And Checks](rendering-and-checks.md): deterministic rendering, CI adapters, and the boundary between deterministic checks and AI-assisted review.
 - [Glossary](glossary.md): shared terminology.
 - [Decisions](decisions): accepted architecture and product decisions.
 
@@ -23,8 +22,7 @@ Read the documents that match the task at hand:
 For product or positioning changes, read:
 
 1. [Product Thesis](product-thesis.md)
-2. [Roadmap](roadmap.md)
-3. [Architecture Knowledge](architecture-knowledge.md)
+2. [Architecture Knowledge](architecture-knowledge.md)
 
 For harness or target-generation changes, read:
 
@@ -42,13 +40,12 @@ For profile or architectural-knowledge changes, read:
 
 For CLI, checks, CI, or tool-integration changes, read:
 
-1. [Roadmap](roadmap.md)
-2. [Effective Harness Model](effective-harness-model.md)
-3. [Rendering And Checks](rendering-and-checks.md)
-4. [Harness Model](harness-model.md)
+1. [Effective Harness Model](effective-harness-model.md)
+2. [Rendering And Checks](rendering-and-checks.md)
+3. [Harness Model](harness-model.md)
 
 For decisions that should remain stable across future discussions, read:
 
 1. [0001. Agent-Neutral Harness](decisions/0001-agent-neutral-harness.md)
 2. [0002. Deterministic Rendering](decisions/0002-deterministic-rendering.md)
-3. [0003. Checks Orchestrate Existing Tools](decisions/0003-checks-orchestrate-existing-tools.md)
+3. [0003. Render Wires Existing Tools Into CI](decisions/0003-checks-orchestrate-existing-tools.md)

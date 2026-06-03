@@ -66,21 +66,6 @@ It should not contain:
 - proprietary architecture diagrams
 - non-public company names or system details
 
-## Possible MVP
-
-An initial MVP could provide:
-
-- `architect-companion init`
-- `architect-companion check`
-- `architect-companion review`
-- generated `AGENTS.md`, `CLAUDE.md`, Cursor rules, and Copilot instructions
-- a small architecture metadata model
-- a few useful policy checks, such as forbidden dependencies or module boundary violations
-- a GitHub Actions workflow
-- one or two complete example repositories
-
-The first useful demo should show an agent being guided by the harness before and during a change, then the same harness checking the result in CI.
-
 ## Current Design Principle
 
 Do not build another AI coding tool.

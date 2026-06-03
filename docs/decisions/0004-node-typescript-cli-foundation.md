@@ -1,4 +1,4 @@
-# 0005. Node TypeScript CLI Foundation
+# 0004. Node TypeScript CLI Foundation
 
 ## Status
 
@@ -6,11 +6,10 @@ Accepted
 
 ## Context
 
-Iteration zero needs a minimal executable project structure before the harness model,
-renderers, and checks are implemented.
-
-The roadmap targets a TypeScript modular-monolith vertical slice, so the foundation should
-fit the first supported stack without introducing implementation dependencies too early.
+The project needs a minimal executable foundation that fits the first
+supported stack (a TypeScript modular monolith) without introducing
+implementation dependencies before the model, renderers, and checks take
+shape.
 
 ## Decision
 
@@ -29,4 +28,4 @@ Actions for repository CI, and the MIT License for open-source distribution.
 - The project can add deterministic render and check commands without changing the package
   foundation.
 - Contributors need a maintained Node.js version and npm.
-- Runtime dependencies remain unnecessary for iteration zero.
+- Runtime dependencies remain minimal until concrete needs arise.
