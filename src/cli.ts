@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { computeCapabilityWarnings } from "./diagnostics/capability-warnings.js";
 import { doctorReportHasIssues, formatDoctorReport, runDoctor } from "./diagnostics/doctor.js";
 import { InitError, runInit } from "./init/init.js";
+import { assertHarnessDirectoryAbsent } from "./init/preflight.js";
 import { runInitWizard } from "./init/prompts.js";
 import {
   discoverProfileNames,
@@ -186,6 +187,16 @@ async function runInitCommand(args: string[], io: CliIo, options: CliOptions): P
     io.stderr.write(`${parsedOptions.message}\n`);
     io.stderr.write("Run `architect-companion --help` for usage.\n");
     return 1;
+  }
+
+  try {
+    await assertHarnessDirectoryAbsent(parsedOptions.options.projectDir);
+  } catch (error: unknown) {
+    if (error instanceof InitError) {
+      io.stderr.write(`${error.message}\n`);
+      return 1;
+    }
+    throw error;
   }
 
   const resolution = await resolveInitInputs(parsedOptions.options, io);

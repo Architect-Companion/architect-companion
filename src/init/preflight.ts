@@ -64,7 +64,7 @@ export async function runPreflight(options: PreflightOptions): Promise<Preflight
   return resolution;
 }
 
-async function assertHarnessDirectoryAbsent(projectDir: string): Promise<void> {
+export async function assertHarnessDirectoryAbsent(projectDir: string): Promise<void> {
   const harnessPath = path.join(projectDir, HARNESS_DIRECTORY);
   try {
     await access(harnessPath, constants.F_OK);

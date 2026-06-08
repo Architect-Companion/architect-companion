@@ -127,6 +127,37 @@ describe("architect-companion init", () => {
     }
   });
 
+  it("refuses before the wizard runs in TTY mode when .architect-companion/ already exists", async () => {
+    const projectDir = makeTempProject();
+    mkdirSync(join(projectDir, ".architect-companion"));
+
+    const originalIsTTY = process.stdin.isTTY;
+    Object.defineProperty(process.stdin, "isTTY", { configurable: true, value: true });
+
+    const promptsModule = await import("../src/init/prompts.js");
+    const wizardSpy = vi.spyOn(promptsModule, "runInitWizard");
+
+    try {
+      const { io, writes } = createIo();
+      const exitCode = await runCli(
+        ["init", "--project", projectDir, "--profiles", profilesDir],
+        io,
+        cliOptions,
+      );
+
+      expect(exitCode).toBe(1);
+      expect(writes.stderr).toContain(".architect-companion/ already exists");
+      expect(wizardSpy).not.toHaveBeenCalled();
+    } finally {
+      wizardSpy.mockRestore();
+      Object.defineProperty(process.stdin, "isTTY", {
+        configurable: true,
+        value: originalIsTTY,
+      });
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+
   it("refuses and leaves no artifacts when an unmarked render target already exists", async () => {
     const projectDir = makeTempProject();
     writeFileSync(join(projectDir, "AGENTS.md"), "# hand-written AGENTS.md\n");
