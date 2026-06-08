@@ -104,7 +104,7 @@ describe("runCli", () => {
     expect(JSON.parse(writes.stdout)).toMatchObject({
       profile: {
         name: "modular-monolith",
-        version: "0.1.0",
+        version: "0.2.0",
       },
       project: {
         name: "sample-project",
@@ -197,7 +197,7 @@ describe("runCli", () => {
         `schemaVersion: 1
 profile:
   name: modular-monolith
-  version: 0.1.0
+  version: 0.2.0
   contentHash: sha256-0000000000000000000000000000000000000000000000000000000000000000
 `,
       );
@@ -231,7 +231,7 @@ profile:
 
       expect(exitCode).toBe(0);
       expect(writes.stdout).toContain("created .architect-companion/profile.lock.yml");
-      expect(writes.stdout).toContain("modular-monolith@0.1.0");
+      expect(writes.stdout).toContain("modular-monolith@0.2.0");
       expect(
         readFileSync(join(projectDir, ".architect-companion/profile.lock.yml"), "utf8"),
       ).toContain("contentHash: sha256-");
@@ -259,7 +259,7 @@ profile:
       );
 
       expect(exitCode).toBe(0);
-      expect(doctorIo.writes.stdout).toContain("profile lock: matches modular-monolith@0.1.0");
+      expect(doctorIo.writes.stdout).toContain("profile lock: matches modular-monolith@0.2.0");
       expect(doctorIo.writes.stdout).toContain("tools: all required external tools are reachable");
     } finally {
       rmSync(projectDir, { force: true, recursive: true });
@@ -277,7 +277,7 @@ profile:
         `schemaVersion: 1
 profile:
   name: modular-monolith
-  version: 0.1.0
+  version: 0.2.0
 project:
   name: sample-project
 modules: architecture/modules.yml

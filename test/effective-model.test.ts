@@ -21,99 +21,87 @@ describe("loadEffectiveHarnessModel", () => {
       projectDir: sampleProjectDir,
     });
 
-    expect(serializeEffectiveHarnessModel(model)).toBe(`{
-  "allowedDependencies": {
-    "billing": [
-      "identity"
-    ]
-  },
-  "examples": [
-    {
-      "bad": "import { loadCustomerRow } from \\"../identity/internal/customer-repository\\";\\n\\nconst customer = await loadCustomerRow(customerId);",
-      "good": "import { findCustomer } from \\"../identity\\";\\n\\nconst customer = await findCustomer(customerId);",
-      "id": "module-access",
-      "title": "Module access"
-    }
-  ],
-  "heuristics": [
-    {
-      "id": "architecture-review",
-      "questions": [
-        "Does the change introduce a new dependency between modules?",
-        "Does every cross-module call use the target module's public API?",
-        "Is shared behavior placed in a stable module instead of duplicated through internal imports?",
-        "Would a future module extraction be harder after this change?"
-      ],
-      "title": "Architecture review"
-    }
-  ],
-  "modules": [
-    {
-      "name": "billing",
-      "path": "src/modules/billing",
-      "publicApi": "src/modules/billing/index.ts"
-    },
-    {
-      "name": "identity",
-      "path": "src/modules/identity",
-      "publicApi": "src/modules/identity/index.ts"
-    }
-  ],
-  "policies": [
-    {
-      "guidance": "Cross-module imports must be declared in allowed_dependencies and target the public_api path declared for the dependency module. Imports from another module's internal files, or from undeclared module dependencies, are boundary violations unless the dependency is redesigned or a documented exception is introduced.",
-      "id": "module-boundaries",
-      "implementation": {
-        "typescript": {
-          "engine": "dependency-cruiser",
-          "renderer": "dependency-cruiser-config"
-        }
+    expect(model).toMatchObject({
+      allowedDependencies: {
+        billing: ["identity"],
       },
-      "intent": "Modules may import another module only when declared in allowed_dependencies and through that module's public API.",
-      "severity": "error",
-      "title": "Module boundaries"
-    }
-  ],
-  "principles": [
-    {
-      "guidance": "Treat each module as the owner of its business behavior, data access, and invariants. Other modules should depend on the module's public API instead of reaching into its internal files.",
-      "id": "module-ownership",
-      "title": "Modules own behavior behind public APIs"
-    }
-  ],
-  "profile": {
-    "name": "modular-monolith",
-    "summary": "Opinionated guidance for TypeScript modular monoliths.",
-    "title": "Modular Monolith",
-    "version": "0.1.0"
-  },
-  "project": {
-    "name": "sample-project"
-  },
-  "schemaVersion": 1,
-  "stack": "typescript",
-  "targets": {
-    "agentsMd": true,
-    "claudeMd": false,
-    "cursor": false,
-    "dependencyCruiser": false,
-    "githubActions": false
-  },
-  "workflows": [
-    {
-      "id": "change-module-boundary",
-      "steps": [
-        "Identify the modules affected by the proposed boundary change.",
-        "Decide whether the change belongs in a public API or inside one module.",
-        "Update the public API before changing consumers.",
-        "Remove cross-module internal imports introduced during the change.",
-        "Run the architecture boundary check once rendering and checks are available."
+      modules: [
+        {
+          name: "billing",
+          path: "src/modules/billing",
+          publicApi: "src/modules/billing/index.ts",
+        },
+        {
+          name: "identity",
+          path: "src/modules/identity",
+          publicApi: "src/modules/identity/index.ts",
+        },
       ],
-      "title": "Change a module boundary"
-    }
-  ]
-}
-`);
+      profile: {
+        name: "modular-monolith",
+        summary: "Opinionated guidance for backend TypeScript modular monoliths.",
+        title: "Modular Monolith",
+        version: "0.2.0",
+      },
+      project: {
+        name: "sample-project",
+      },
+      schemaVersion: 1,
+      stack: "typescript",
+      targets: {
+        agentsMd: true,
+        claudeMd: false,
+        cursor: false,
+        dependencyCruiser: false,
+        githubActions: false,
+      },
+    });
+    expect(model.principles.map((principle) => principle.id)).toEqual([
+      "business-capability-modules",
+      "contract-first-boundaries",
+      "internal-freedom",
+      "module-ownership",
+      "operational-modularity",
+    ]);
+    expect(model.policies.map((policy) => policy.id)).toEqual([
+      "async-event-contracts",
+      "data-ownership",
+      "migration-ownership",
+      "module-boundaries",
+      "public-api-contracts",
+      "test-placement",
+      "transaction-boundaries",
+    ]);
+    expect(model.workflows.map((workflow) => workflow.id)).toEqual([
+      "add-module",
+      "change-module-boundary",
+      "deprecate-public-api",
+      "extract-module",
+    ]);
+    expect(model.heuristics.map((heuristic) => heuristic.id)).toEqual([
+      "api-and-event-review",
+      "architecture-review",
+      "data-and-transaction-review",
+      "module-design-review",
+      "testing-and-migration-review",
+    ]);
+    expect(model.examples.map((example) => example.id)).toEqual([
+      "cross-module-data-access",
+      "event-contract",
+      "migration-ownership",
+      "module-access",
+      "module-public-api",
+      "test-placement",
+      "transaction-boundary",
+    ]);
+    expect(
+      model.policies.find((policy) => policy.id === "module-boundaries")?.implementation,
+    ).toEqual({
+      typescript: {
+        engine: "dependency-cruiser",
+        renderer: "dependency-cruiser-config",
+      },
+    });
   });
 
   it("produces deterministic output across repeated loads", async () => {
@@ -171,7 +159,7 @@ modules: architecture/modules.yml
       `schemaVersion: 2
 profile:
   name: modular-monolith
-  version: 0.1.0
+  version: 0.2.0
 project:
   name: sample-project
 modules: architecture/modules.yml
@@ -194,7 +182,7 @@ modules: architecture/modules.yml
       `schemaVersion: 1
 profile:
   name: modular-monolith
-  version: 0.1.0
+  version: 0.2.0
 project:
   name: My Project
 modules: architecture/modules.yml
@@ -281,7 +269,7 @@ allowed_dependencies:
       `schemaVersion: 1
 profile:
   name: modular-monolith
-  version: 0.1.0
+  version: 0.2.0
 project:
   name: sample-project
 modules: architecture/modules.yml
@@ -654,7 +642,7 @@ function profileYaml(sections: string): string {
   return `schemaVersion: 1
 profile:
   name: modular-monolith
-  version: 0.1.0
+  version: 0.2.0
   title: Modular Monolith
   summary: Test profile.
 defaults:

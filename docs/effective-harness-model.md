@@ -12,7 +12,7 @@ Profiles live under `profiles/<profile-name>/profile.yml`:
 schemaVersion: 1
 profile:
   name: modular-monolith
-  version: 0.1.0
+  version: 0.2.0
 defaults:
   stack: typescript
   targets:
@@ -56,7 +56,7 @@ Project harness configuration lives at `.architect-companion/harness.yml`:
 schemaVersion: 1
 profile:
   name: modular-monolith
-  version: 0.1.0
+  version: 0.2.0
 project:
   name: example-app
 modules: architecture/modules.yml
@@ -138,7 +138,7 @@ After the first successful `render`, the effective profile is pinned in
 schemaVersion: 1
 profile:
   name: modular-monolith
-  version: 0.1.0
+  version: 0.2.0
   contentHash: sha256-<hex digest of profile.yml bytes>
 ```
 

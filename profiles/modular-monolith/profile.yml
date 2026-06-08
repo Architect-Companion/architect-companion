@@ -1,9 +1,9 @@
 schemaVersion: 1
 profile:
   name: modular-monolith
-  version: 0.1.0
+  version: 0.2.0
   title: Modular Monolith
-  summary: Opinionated guidance for TypeScript modular monoliths.
+  summary: Opinionated guidance for backend TypeScript modular monoliths.
 defaults:
   stack: typescript
   targets:
@@ -13,13 +13,73 @@ defaults:
     dependencyCruiser: false
     githubActions: false
 principles:
+  - id: business-capability-modules
+    title: Modules represent business capabilities
+    guidance: >-
+      Model modules around stable business capabilities and the decisions they
+      own. A module named for a capability such as billing, identity, catalog,
+      or fulfillment is usually healthier than a module named controllers,
+      repositories, utils, or shared.
+  - id: contract-first-boundaries
+    title: Boundaries are designed through contracts first
+    guidance: >-
+      Design the public contract before moving files or changing consumers. A
+      good module boundary is expressed through public APIs, events, read
+      models, tests, and ownership rules, not merely by placing code in a
+      different directory.
+  - id: internal-freedom
+    title: Internals stay private so modules can change
+    guidance: >-
+      Inside a module, prefer the simplest local structure that keeps the
+      module understandable. Do not export repositories, entities, database
+      clients, framework adapters, or helper folders to compensate for a weak
+      public API.
   - id: module-ownership
     title: Modules own behavior behind public APIs
     guidance: >-
       Treat each module as the owner of its business behavior, data access, and
       invariants. Other modules should depend on the module's public API instead
       of reaching into its internal files.
+  - id: operational-modularity
+    title: Keep one deployable system while preserving module discipline
+    guidance: >-
+      A modular monolith should remain easy to build, run, test, and deploy as
+      one application. The modularity is in ownership, dependencies, contracts,
+      and data access rules; extraction into services is an option, not the
+      default goal.
 policies:
+  - id: async-event-contracts
+    title: Asynchronous event contracts
+    intent: Modules publish events as stable facts without knowing their consumers.
+    severity: warning
+    guidance: >-
+      Events crossing module boundaries must be named for facts that already
+      happened, owned by the publishing module, and treated as public contracts
+      when consumers depend on them. Payloads should contain stable identifiers
+      and the minimal facts consumers need, not ORM entities, internal rows, or
+      consumer-specific fields. Event handlers belong to the consuming module
+      and should be idempotent and retry-safe.
+  - id: data-ownership
+    title: Data ownership
+    intent: Each persistent data structure has exactly one owning module.
+    severity: error
+    guidance: >-
+      A modular monolith may use one physical database, but logical ownership
+      must stay strict. One module owns each table, collection, repository, and
+      write rule. Other modules must access that data through the owner module's
+      public API, owner-published events, or explicit read models. Cross-module
+      SQL joins, shared repositories, and direct reads of another module's
+      tables are boundary violations unless captured as temporary exceptions.
+  - id: migration-ownership
+    title: Migration ownership
+    intent: The module that owns the data owns the schema and data migration.
+    severity: error
+    guidance: >-
+      Schema and data migrations belong to the module that owns the affected
+      data. The owning module is responsible for the migration script, rollout
+      plan, backfill, rollback posture, cleanup, and review. A migration that
+      touches another module's tables must be made by that owner or recorded as
+      an explicit exception with owner approval and a removal condition.
   - id: module-boundaries
     title: Module boundaries
     intent: Modules may import another module only when declared in allowed_dependencies and through that module's public API.
@@ -34,16 +94,88 @@ policies:
       typescript:
         engine: dependency-cruiser
         renderer: dependency-cruiser-config
+  - id: public-api-contracts
+    title: Public API contracts
+    intent: Modules expose a small stable facade and keep implementation details private.
+    severity: error
+    guidance: >-
+      A module's public API should live at the declared public_api entrypoint,
+      typically `src/modules/<module>/index.ts`. It may export use-case
+      functions, command and query handlers, DTOs, value types, and public
+      events intended for consumers. It must not export repositories, ORM
+      entities, database clients, framework controllers, internal services,
+      validators, or filesystem paths into internal folders.
+  - id: test-placement
+    title: Test placement
+    intent: Tests should prove module behavior and contracts at the right boundary.
+    severity: warning
+    guidance: >-
+      Put fast unit tests beside internal module code, module-level use-case and
+      integration tests inside the owning module, and cross-module contract
+      tests at the owner-consumer boundary. Architecture checks should enforce
+      dependency rules at the repository level. Broad end-to-end tests are useful
+      smoke tests, but they should not be the main proof that module boundaries
+      hold.
+  - id: transaction-boundaries
+    title: Transaction boundaries
+    intent: A command transaction belongs to one module and one use case.
+    severity: error
+    guidance: >-
+      A transaction may write only data owned by the module executing the use
+      case. If a workflow needs another module to change state, call that
+      module's public API outside the owning transaction or publish an event for
+      asynchronous follow-up. A transaction that writes across modules means the
+      boundary is wrong, the workflow needs eventual consistency, or a temporary
+      exception must be documented.
 workflows:
+  - id: add-module
+    title: Add a module
+    steps:
+      - Name the business capability, decisions, invariants, and data the module will own.
+      - Check whether an existing module should own the behavior instead of creating a new boundary.
+      - Define the public API entrypoint before adding internal folders or consumers.
+      - Declare only the allowed_dependencies needed by the first use cases.
+      - Assign owned data and migration responsibility before adding repositories.
+      - Add module-level tests for the first use cases and contract tests for public consumers.
+      - Render and run the selected architecture checks before review.
   - id: change-module-boundary
     title: Change a module boundary
     steps:
       - Identify the modules affected by the proposed boundary change.
-      - Decide whether the change belongs in a public API or inside one module.
+      - Decide whether the change needs a public API, an event, a read model, or a redesigned ownership boundary.
+      - Update module metadata and allowed_dependencies before changing consumers.
       - Update the public API before changing consumers.
+      - Keep transaction and data ownership inside the owning module while moving behavior.
+      - Add or update module tests and cross-module contract tests.
       - Remove cross-module internal imports introduced during the change.
-      - Run the architecture boundary check once rendering and checks are available.
+      - Render and run the selected architecture checks before review.
+  - id: deprecate-public-api
+    title: Deprecate a public API
+    steps:
+      - Add the replacement API first and keep the old API as a thin compatibility layer.
+      - Record the owner, affected consumers, removal condition, and expected removal window.
+      - Add contract coverage for both the old behavior and the replacement while consumers migrate.
+      - Move consumers to the replacement API without exposing internals.
+      - Remove the deprecated API once consumers are gone, then remove any dependency that existed only for compatibility.
+      - Render and run the selected architecture checks before review.
+  - id: extract-module
+    title: Extract a module
+    steps:
+      - Identify the business capability, data ownership, and consumers that justify the new boundary.
+      - Define the target module public API and route current behavior through that contract.
+      - Move consumers to the new public API before moving storage or internal implementation.
+      - Move owned data, repositories, and migrations only after callers no longer depend on old internals.
+      - Use a temporary adapter only when needed, with an owner and removal condition.
+      - Tighten allowed_dependencies and remove old internal imports once the extraction is complete.
+      - Render and run the selected architecture checks before review.
 heuristics:
+  - id: api-and-event-review
+    title: API and event review
+    questions:
+      - Is the public API small enough that consumers depend on business operations instead of implementation details?
+      - Does the API expose DTOs and value types instead of ORM entities, repositories, or framework objects?
+      - Are events named as facts that happened rather than commands to specific consumers?
+      - Can event consumers retry safely without producer knowledge or hidden ordering assumptions?
   - id: architecture-review
     title: Architecture review
     questions:
@@ -51,7 +183,67 @@ heuristics:
       - Does every cross-module call use the target module's public API?
       - Is shared behavior placed in a stable module instead of duplicated through internal imports?
       - Would a future module extraction be harder after this change?
+      - Is any shortcut tracked as an exception with an owner and removal condition?
+  - id: data-and-transaction-review
+    title: Data and transaction review
+    questions:
+      - Which module owns every table, collection, repository, and migration touched by this change?
+      - Does any query read another module's owned data directly instead of using an API, event, or read model?
+      - Does any transaction write data owned by more than one module?
+      - Is eventual consistency explicit where a workflow crosses module ownership boundaries?
+  - id: module-design-review
+    title: Module design review
+    questions:
+      - Is the module named for a business capability rather than a technical layer?
+      - Are its responsibilities cohesive enough that one owner can reason about its invariants?
+      - Is the boundary stable enough to survive the next likely product change?
+      - Would merging this behavior into an existing module reduce accidental coupling?
+  - id: testing-and-migration-review
+    title: Testing and migration review
+    questions:
+      - Are module-level tests covering use cases where the business invariants live?
+      - Are cross-module expectations covered by contract tests instead of only end-to-end tests?
+      - Does each migration have a clear owning module, rollout plan, and cleanup path?
+      - Can the change be reviewed without understanding unrelated module internals?
 examples:
+  - id: cross-module-data-access
+    title: Cross-module data access
+    good: |-
+      import { getCustomerSnapshot } from "../identity";
+
+      const customer = await getCustomerSnapshot(customerId);
+    bad: |-
+      import { db } from "../../db";
+
+      const customer = await db.identityCustomer.findUnique({
+        where: { id: customerId },
+      });
+  - id: event-contract
+    title: Event contract
+    good: |-
+      export type InvoiceIssuedV1 = {
+        eventName: "billing.invoice-issued.v1";
+        invoiceId: string;
+        customerId: string;
+        occurredAt: string;
+      };
+    bad: |-
+      export type InvoiceIssued = {
+        invoiceRow: InvoiceRow;
+        notifyFulfillmentImmediately: boolean;
+        identityCacheKey: string;
+      };
+  - id: migration-ownership
+    title: Migration ownership
+    good: |-
+      // src/modules/billing/migrations/20260608-add-invoice-status.ts
+      export async function up(db: BillingMigrationDb) {
+        await db.schema.alterTable("billing_invoices").addColumn("status", "text");
+      }
+    bad: |-
+      // src/migrations/20260608-cross-module-cleanup.ts
+      await db.schema.alterTable("identity_users").dropColumn("legacy_plan");
+      await db.schema.alterTable("billing_invoices").dropColumn("plan_snapshot");
   - id: module-access
     title: Module access
     good: |-
@@ -62,3 +254,37 @@ examples:
       import { loadCustomerRow } from "../identity/internal/customer-repository";
 
       const customer = await loadCustomerRow(customerId);
+  - id: module-public-api
+    title: Module public API
+    good: |-
+      export { createInvoice, getInvoiceSummary } from "./application/invoices";
+      export type { InvoiceSummary } from "./application/invoice-dtos";
+      export type { InvoiceIssuedV1 } from "./events/invoice-issued";
+    bad: |-
+      export { billingDb } from "./internal/db";
+      export { invoiceRepository } from "./internal/invoice-repository";
+      export type { InvoiceRow } from "./internal/schema";
+  - id: test-placement
+    title: Test placement
+    good: |-
+      // src/modules/billing/application/create-invoice.test.ts
+      await createInvoice(command);
+
+      await expectInvoiceRecorded(command.invoiceId);
+    bad: |-
+      // test/e2e/checkout.test.ts
+      await request(app).post("/checkout").send(command);
+
+      expect(await identityDb.customer.findUnique({ where: { id: customerId } })).toBeTruthy();
+  - id: transaction-boundary
+    title: Transaction boundary
+    good: |-
+      await billingUnitOfWork.run(async (billing) => {
+        await billing.invoices.recordPayment(command);
+        await billing.outbox.enqueue(paymentRecorded(command.invoiceId));
+      });
+    bad: |-
+      await db.transaction(async (tx) => {
+        await tx.billingInvoice.update({ where: { id: invoiceId }, data: { paid: true } });
+        await tx.identityCustomer.update({ where: { id: customerId }, data: { status: "active" } });
+      });

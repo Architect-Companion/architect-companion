@@ -96,7 +96,7 @@ For example:
 # .architect-companion/harness.yml
 profile:
   name: modular-monolith
-  version: 0.1.0
+  version: 0.2.0
 
 targets:
   agentsMd: true

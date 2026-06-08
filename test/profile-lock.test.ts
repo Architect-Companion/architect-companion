@@ -35,7 +35,7 @@ describe("resolveProfileLockStatus", () => {
 
       expect(status.kind).toBe("missing");
       expect(status.expected.profile.name).toBe("modular-monolith");
-      expect(status.expected.profile.version).toBe("0.1.0");
+      expect(status.expected.profile.version).toBe("0.2.0");
       expect(status.expected.profile.contentHash).toMatch(/^sha256-[0-9a-f]{64}$/);
     } finally {
       rmSync(projectDir, { force: true, recursive: true });
@@ -179,7 +179,7 @@ function defaultLock(): {
     profile: {
       contentHash: "sha256-0000000000000000000000000000000000000000000000000000000000000000",
       name: "modular-monolith",
-      version: "0.1.0",
+      version: "0.2.0",
     },
     schemaVersion: 1,
   };

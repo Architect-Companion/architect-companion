@@ -294,7 +294,7 @@ function writeHarness(projectDir: string, targets: string): void {
     `schemaVersion: 1
 profile:
   name: modular-monolith
-  version: 0.1.0
+  version: 0.2.0
 project:
   name: sample-project
 modules: architecture/modules.yml
