@@ -45,19 +45,10 @@ export async function runInitWizard(options: WizardOptions): Promise<WizardResul
     return cancelled();
   }
 
-  let profileMetadata: ProfileMetadata;
-  try {
-    profileMetadata = await options.loadProfile(profileName);
-  } catch (error: unknown) {
-    if (error instanceof InitError) {
-      clack.cancel(error.message);
-      return cancelled();
-    }
-    throw error;
-  }
+  const profileMetadata = await options.loadProfile(profileName);
 
-  const stack = await promptStack(profileMetadata, options.presetStack);
-  if (stack === undefined && profileMetadata.defaults.stack === undefined) {
+  const stackOutcome = await promptStack(profileMetadata, options.presetStack);
+  if (stackOutcome.kind === "cancelled") {
     return cancelled();
   }
 
@@ -71,7 +62,7 @@ export async function runInitWizard(options: WizardOptions): Promise<WizardResul
     message: buildConfirmMessage({
       profileMetadata,
       projectName,
-      stack: stack ?? profileMetadata.defaults.stack,
+      stack: stackOutcome.stack,
       enabledTargets: targetSelection.enabled,
     }),
   });
@@ -91,8 +82,8 @@ export async function runInitWizard(options: WizardOptions): Promise<WizardResul
     profileName,
     projectName,
   };
-  if (stack !== undefined) {
-    result.stack = stack;
+  if (stackOutcome.explicit) {
+    result.stack = stackOutcome.stack;
   }
   return result;
 }
@@ -129,20 +120,23 @@ async function promptProfileName(
   preset: string | undefined,
 ): Promise<string | undefined> {
   if (preset !== undefined) {
+    if (!installedProfiles.includes(preset)) {
+      throw new InitError(
+        `--profile ${preset} is not installed (installed: ${installedProfiles.length === 0 ? "none" : installedProfiles.join(", ")}).`,
+      );
+    }
     clack.note(`Profile: ${preset} (from --profile)`);
     return preset;
   }
 
   if (installedProfiles.length === 0) {
-    clack.cancel("No profiles installed.");
-    return undefined;
+    throw new InitError("No profiles installed.");
   }
 
   if (installedProfiles.length === 1) {
     const [only] = installedProfiles;
     if (only === undefined) {
-      clack.cancel("No profiles installed.");
-      return undefined;
+      throw new InitError("No profiles installed.");
     }
     clack.note(`Profile: ${only} (only installed profile)`);
     return only;
@@ -160,10 +154,14 @@ async function promptProfileName(
   return result;
 }
 
+type StackOutcome =
+  | { kind: "cancelled" }
+  | { explicit: boolean; kind: "resolved"; stack: SupportedStack };
+
 async function promptStack(
   profileMetadata: ProfileMetadata,
   preset: SupportedStack | undefined,
-): Promise<SupportedStack | undefined> {
+): Promise<StackOutcome> {
   const profileStack = profileMetadata.defaults.stack;
 
   if (preset !== undefined) {
@@ -173,12 +171,12 @@ async function promptStack(
       );
     }
     clack.note(`Stack: ${preset} (from --stack)`);
-    return preset;
+    return { explicit: true, kind: "resolved", stack: preset };
   }
 
   if (profileStack !== undefined) {
     clack.note(`Stack: ${profileStack} (profile default)`);
-    return undefined;
+    return { explicit: false, kind: "resolved", stack: profileStack };
   }
 
   const result = await clack.select<SupportedStack>({
@@ -187,10 +185,10 @@ async function promptStack(
   });
 
   if (clack.isCancel(result)) {
-    return undefined;
+    return { kind: "cancelled" };
   }
 
-  return result;
+  return { explicit: true, kind: "resolved", stack: result };
 }
 
 type TargetSelection = {

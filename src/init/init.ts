@@ -128,9 +128,13 @@ export async function runInit(inputs: InitInputs, io: InitIo): Promise<number> {
     } else {
       for (const output of preflight.renderOutputs) {
         const absolutePath = path.join(inputs.projectDir, output.outputPath);
-        tracker.createdFiles.push(absolutePath);
+        if (!preflight.preExistingFiles.has(absolutePath)) {
+          tracker.createdFiles.push(absolutePath);
+        }
         for (const parentDir of collectParentDirectories(inputs.projectDir, absolutePath)) {
-          tracker.createdDirectories.push(parentDir);
+          if (!preflight.preExistingDirectories.has(parentDir)) {
+            tracker.createdDirectories.push(parentDir);
+          }
         }
       }
 

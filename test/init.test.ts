@@ -416,4 +416,101 @@ describe("architect-companion init", () => {
       rmSync(projectDir, { force: true, recursive: true });
     }
   });
+
+  it("preserves a pre-existing marked render-target file when rollback runs", async () => {
+    const projectDir = makeTempProject();
+    const renderModule = await import("../src/render/render.js");
+    const preExistingContent = `<!-- ${renderModule.GENERATED_FILE_MARKER} -->\n# pre-existing marked AGENTS.md\n`;
+    writeFileSync(join(projectDir, "AGENTS.md"), preExistingContent);
+
+    const renderSpy = vi
+      .spyOn(renderModule, "renderEffectiveHarnessModel")
+      .mockRejectedValueOnce(new renderModule.RenderError("simulated render failure"));
+
+    try {
+      const { io } = createIo();
+      const exitCode = await runCli(
+        ["init", "--project", projectDir, "--profiles", profilesDir],
+        io,
+        cliOptions,
+      );
+
+      expect(exitCode).toBe(1);
+      expect(existsSync(join(projectDir, ".architect-companion"))).toBe(false);
+      // The marked file pre-existed; rollback must not delete it.
+      expect(existsSync(join(projectDir, "AGENTS.md"))).toBe(true);
+      expect(readFileSync(join(projectDir, "AGENTS.md"), "utf8")).toBe(preExistingContent);
+    } finally {
+      renderSpy.mockRestore();
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+
+  it("preserves a pre-existing empty parent directory when rollback runs", async () => {
+    const projectDir = makeTempProject();
+    mkdirSync(join(projectDir, ".cursor", "rules"), { recursive: true });
+
+    const renderModule = await import("../src/render/render.js");
+    const renderSpy = vi
+      .spyOn(renderModule, "renderEffectiveHarnessModel")
+      .mockRejectedValueOnce(new renderModule.RenderError("simulated render failure"));
+
+    try {
+      const { io } = createIo();
+      const exitCode = await runCli(
+        ["init", "--project", projectDir, "--profiles", profilesDir, "--target", "cursor"],
+        io,
+        cliOptions,
+      );
+
+      expect(exitCode).toBe(1);
+      expect(existsSync(join(projectDir, ".architect-companion"))).toBe(false);
+      // The empty .cursor/rules/ directory existed before init; rollback must not remove it.
+      expect(existsSync(join(projectDir, ".cursor", "rules"))).toBe(true);
+      expect(existsSync(join(projectDir, ".cursor"))).toBe(true);
+    } finally {
+      renderSpy.mockRestore();
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+
+  it("rejects --project-name that is not a valid identifier", async () => {
+    const projectDir = makeTempProject();
+
+    try {
+      const { io, writes } = createIo();
+      const exitCode = await runCli(
+        ["init", "--project", projectDir, "--profiles", profilesDir, "--project-name", "Bad_Name"],
+        io,
+        cliOptions,
+      );
+
+      expect(exitCode).toBe(1);
+      expect(writes.stderr).toContain("--project-name");
+      expect(writes.stderr).toContain("lowercase letters");
+      expect(existsSync(join(projectDir, ".architect-companion"))).toBe(false);
+    } finally {
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+
+  it("rejects --profile that is not a valid identifier", async () => {
+    const projectDir = makeTempProject();
+
+    try {
+      const { io, writes } = createIo();
+      const exitCode = await runCli(
+        ["init", "--project", projectDir, "--profiles", profilesDir, "--profile", "Bad_Name"],
+        io,
+        cliOptions,
+      );
+
+      expect(exitCode).toBe(1);
+      expect(writes.stderr).toContain("--profile");
+      expect(writes.stderr).toContain("lowercase letters");
+      expect(existsSync(join(projectDir, ".architect-companion"))).toBe(false);
+    } finally {
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
 });

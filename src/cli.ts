@@ -217,12 +217,10 @@ function shouldRunWizard(parsed: InitParsedOptions): boolean {
     return false;
   }
   const targetsExplicit = parsed.enabledTargets.length > 0 || parsed.disabledTargets.length > 0;
-  return (
-    parsed.profile === undefined ||
-    parsed.projectName === undefined ||
-    parsed.stack === undefined ||
-    !targetsExplicit
-  );
+  // Stack is intentionally not in this list — the profile's `defaults.stack` is a
+  // valid silent default in both interactive and non-interactive mode. The wizard
+  // only fires when an input has no usable default at the CLI level.
+  return parsed.profile === undefined || parsed.projectName === undefined || !targetsExplicit;
 }
 
 async function runInspectCommand(args: string[], io: CliIo, options: CliOptions): Promise<number> {
@@ -431,7 +429,7 @@ function parseDirectoryOptions(
     const value = args[index + 1];
 
     if (flag === "--project") {
-      const optionValue = parseDirectoryOptionValue("--project", value);
+      const optionValue = parseFlagValue("--project", value, "directory");
       if (!optionValue.success) {
         return optionValue;
       }
@@ -442,7 +440,7 @@ function parseDirectoryOptions(
     }
 
     if (flag === "--profiles") {
-      const optionValue = parseDirectoryOptionValue("--profiles", value);
+      const optionValue = parseFlagValue("--profiles", value, "directory");
       if (!optionValue.success) {
         return optionValue;
       }
@@ -477,6 +475,9 @@ type InitParsedOptions = ResolvedDirectoryOptions & {
   stack?: SupportedStack;
 };
 
+const IDENTIFIER_PATTERN = /^[a-z][a-z0-9-]*$/;
+const IDENTIFIER_ERROR = "must use lowercase letters, numbers, and hyphens, starting with a letter";
+
 function parseInitOptions(
   args: string[],
   options: CliOptions,
@@ -507,9 +508,15 @@ function parseInitOptions(
     }
 
     if (flag === "--profile") {
-      const optionValue = parseDirectoryOptionValue("--profile", value);
+      const optionValue = parseFlagValue("--profile", value, "value");
       if (!optionValue.success) {
         return optionValue;
+      }
+      if (!IDENTIFIER_PATTERN.test(optionValue.value)) {
+        return {
+          message: `--profile ${IDENTIFIER_ERROR}.`,
+          success: false,
+        };
       }
       profile = optionValue.value;
       index += 1;
@@ -517,7 +524,7 @@ function parseInitOptions(
     }
 
     if (flag === "--stack") {
-      const optionValue = parseDirectoryOptionValue("--stack", value);
+      const optionValue = parseFlagValue("--stack", value, "value");
       if (!optionValue.success) {
         return optionValue;
       }
@@ -533,9 +540,15 @@ function parseInitOptions(
     }
 
     if (flag === "--project-name") {
-      const optionValue = parseDirectoryOptionValue("--project-name", value);
+      const optionValue = parseFlagValue("--project-name", value, "value");
       if (!optionValue.success) {
         return optionValue;
+      }
+      if (!IDENTIFIER_PATTERN.test(optionValue.value)) {
+        return {
+          message: `--project-name ${IDENTIFIER_ERROR}.`,
+          success: false,
+        };
       }
       projectName = optionValue.value;
       index += 1;
@@ -543,7 +556,7 @@ function parseInitOptions(
     }
 
     if (flag === "--target" || flag === "--no-target") {
-      const optionValue = parseDirectoryOptionValue(flag, value);
+      const optionValue = parseFlagValue(flag, value, "value");
       if (!optionValue.success) {
         return optionValue;
       }
@@ -564,7 +577,7 @@ function parseInitOptions(
     }
 
     if (flag === "--project") {
-      const optionValue = parseDirectoryOptionValue("--project", value);
+      const optionValue = parseFlagValue("--project", value, "directory");
       if (!optionValue.success) {
         return optionValue;
       }
@@ -574,7 +587,7 @@ function parseInitOptions(
     }
 
     if (flag === "--profiles") {
-      const optionValue = parseDirectoryOptionValue("--profiles", value);
+      const optionValue = parseFlagValue("--profiles", value, "directory");
       if (!optionValue.success) {
         return optionValue;
       }
@@ -785,7 +798,7 @@ function parseRenderOptions(
     }
 
     if (flag === "--project") {
-      const optionValue = parseDirectoryOptionValue("--project", value);
+      const optionValue = parseFlagValue("--project", value, "directory");
       if (!optionValue.success) {
         return optionValue;
       }
@@ -796,7 +809,7 @@ function parseRenderOptions(
     }
 
     if (flag === "--profiles") {
-      const optionValue = parseDirectoryOptionValue("--profiles", value);
+      const optionValue = parseFlagValue("--profiles", value, "directory");
       if (!optionValue.success) {
         return optionValue;
       }
@@ -822,9 +835,10 @@ function parseRenderOptions(
   };
 }
 
-function parseDirectoryOptionValue(
+function parseFlagValue(
   flag: string,
   value: string | undefined,
+  noun: string,
 ):
   | {
       success: true;
@@ -836,7 +850,7 @@ function parseDirectoryOptionValue(
     } {
   if (value === undefined || value.trim() === "" || value.startsWith("--")) {
     return {
-      message: `${flag} requires a directory.`,
+      message: `${flag} requires a ${noun}.`,
       success: false,
     };
   }

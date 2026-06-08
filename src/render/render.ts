@@ -23,6 +23,8 @@ const targetRenderers = [
   createTargetRenderer("githubActions", (model) => renderGitHubActionsWorkflow(model).contents),
 ] satisfies TargetRenderer[];
 
+assertEveryKnownTargetHasRenderer(targetRenderers);
+
 type RenderStatus = "created" | "stale" | "unchanged" | "updated";
 
 type TargetRenderer = {
@@ -165,6 +167,16 @@ function createTargetRenderer(
     },
     target,
   };
+}
+
+function assertEveryKnownTargetHasRenderer(renderers: readonly TargetRenderer[]): void {
+  const registered = new Set(renderers.map((renderer) => renderer.target));
+  const missing = knownTargetKeys.filter((target) => !registered.has(target));
+  if (missing.length > 0) {
+    throw new Error(
+      `Architect Companion bug: no renderer registered for target(s) ${missing.join(", ")}. The target registry and render.ts are out of sync.`,
+    );
+  }
 }
 
 function renderTargetOutputs(

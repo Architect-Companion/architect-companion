@@ -143,4 +143,98 @@ describe("runInitWizard", () => {
     expect(result.enabledTargets).toEqual(["cursor"]);
     expect(result.disabledTargets).toEqual(["agentsMd"]);
   });
+
+  it("prompts via select when multiple profiles are installed", async () => {
+    mockedFn("text").mockResolvedValueOnce("widgets");
+    mockedFn("select").mockResolvedValueOnce("modular-monolith");
+    mockedFn("multiselect").mockResolvedValueOnce(["agentsMd"]);
+    mockedFn("confirm").mockResolvedValueOnce(true);
+
+    const result = await runInitWizard({
+      defaultProjectName: "widgets",
+      installedProfiles: ["alpha-profile", "modular-monolith"],
+      loadProfile: async (name) => loadProfileMetadata(profilesDir, name),
+      presetTargetsExplicit: false,
+    });
+
+    expect(mockedFn("select")).toHaveBeenCalledTimes(1);
+    if (!result.cancelled) {
+      expect(result.profileName).toBe("modular-monolith");
+    }
+  });
+
+  it("throws InitError when --profile preset is not installed", async () => {
+    mockedFn("text").mockResolvedValueOnce("widgets");
+
+    await expect(
+      runInitWizard({
+        defaultProjectName: "widgets",
+        installedProfiles: ["modular-monolith"],
+        loadProfile: async (name) => loadProfileMetadata(profilesDir, name),
+        presetProfileName: "bogus",
+        presetTargetsExplicit: false,
+      }),
+    ).rejects.toThrow(/--profile bogus is not installed/);
+  });
+
+  it("throws InitError when --stack preset conflicts with profile default", async () => {
+    mockedFn("text").mockResolvedValueOnce("widgets");
+
+    await expect(
+      runInitWizard({
+        defaultProjectName: "widgets",
+        installedProfiles: ["modular-monolith"],
+        loadProfile: async (name) => loadProfileMetadata(profilesDir, name),
+        presetStack: "rust" as never,
+        presetTargetsExplicit: false,
+      }),
+    ).rejects.toThrow(/--stack rust is not supported/);
+  });
+
+  it("throws InitError when no profiles are installed", async () => {
+    mockedFn("text").mockResolvedValueOnce("widgets");
+
+    await expect(
+      runInitWizard({
+        defaultProjectName: "widgets",
+        installedProfiles: [],
+        loadProfile: async (name) => loadProfileMetadata(profilesDir, name),
+        presetTargetsExplicit: false,
+      }),
+    ).rejects.toThrow(/No profiles installed/);
+  });
+
+  it("returns cancelled when the confirm prompt is aborted via isCancel", async () => {
+    mockedFn("text").mockResolvedValueOnce("widgets");
+    mockedFn("multiselect").mockResolvedValueOnce(["agentsMd"]);
+    mockedFn("confirm").mockResolvedValueOnce(cancelSymbol);
+
+    const result = await runInitWizard({
+      defaultProjectName: "widgets",
+      installedProfiles: ["modular-monolith"],
+      loadProfile: async (name) => loadProfileMetadata(profilesDir, name),
+      presetTargetsExplicit: false,
+    });
+
+    expect(result.cancelled).toBe(true);
+  });
+
+  it("does not record stack as an explicit override when the profile default applies", async () => {
+    mockedFn("text").mockResolvedValueOnce("widgets");
+    mockedFn("multiselect").mockResolvedValueOnce(["agentsMd"]);
+    mockedFn("confirm").mockResolvedValueOnce(true);
+
+    const result = await runInitWizard({
+      defaultProjectName: "widgets",
+      installedProfiles: ["modular-monolith"],
+      loadProfile: async (name) => loadProfileMetadata(profilesDir, name),
+      presetTargetsExplicit: false,
+    });
+
+    if (result.cancelled) {
+      throw new Error("Expected result to not be cancelled");
+    }
+    // No --stack was passed; the profile default ("typescript") is used silently.
+    expect(result.stack).toBeUndefined();
+  });
 });

@@ -26,6 +26,8 @@ export type PreflightOptions = {
 
 export type PreflightResolution = {
   mergedTargets: Record<KnownTargetKey, boolean>;
+  preExistingDirectories: Set<string>;
+  preExistingFiles: Set<string>;
   profileMetadata: ProfileMetadata;
   renderOutputs: RendererOutput[];
   resolvedStack: SupportedStack;
@@ -45,10 +47,12 @@ export async function runPreflight(options: PreflightOptions): Promise<Preflight
   );
   const renderOutputs = computeRenderOutputs(mergedTargets);
 
-  await assertNoUnmarkedConflicts(options.projectDir, renderOutputs);
+  const preExistence = await checkRenderOutputPreExistence(options.projectDir, renderOutputs);
 
   const resolution: PreflightResolution = {
     mergedTargets,
+    preExistingDirectories: preExistence.directories,
+    preExistingFiles: preExistence.files,
     profileMetadata,
     renderOutputs,
     resolvedStack,
@@ -154,11 +158,18 @@ function computeRenderOutputs(mergedTargets: Record<KnownTargetKey, boolean>): R
   }
 }
 
-async function assertNoUnmarkedConflicts(
+type PreExistence = {
+  directories: Set<string>;
+  files: Set<string>;
+};
+
+async function checkRenderOutputPreExistence(
   projectDir: string,
   renderOutputs: RendererOutput[],
-): Promise<void> {
+): Promise<PreExistence> {
   const conflicts: string[] = [];
+  const preExistingFiles = new Set<string>();
+  const preExistingDirectories = new Set<string>();
 
   for (const output of renderOutputs) {
     const absolutePath = path.join(projectDir, output.outputPath);
@@ -168,6 +179,8 @@ async function assertNoUnmarkedConflicts(
       conflicts.push(`${output.outputPath} (path contains a symbolic link)`);
       continue;
     }
+
+    await recordPreExistingAncestors(projectDir, absolutePath, preExistingDirectories);
 
     let stats;
     try {
@@ -187,17 +200,48 @@ async function assertNoUnmarkedConflicts(
     const existingContent = await readFile(absolutePath, "utf8");
     if (!hasGeneratedMarker(existingContent)) {
       conflicts.push(output.outputPath);
+      continue;
     }
+
+    preExistingFiles.add(absolutePath);
   }
 
-  if (conflicts.length === 0) {
-    return;
+  if (conflicts.length > 0) {
+    const list = conflicts.map((entry) => `  - ${entry}`).join("\n");
+    throw new InitError(
+      `cannot initialize — the following file${conflicts.length === 1 ? "" : "s"} already exist${conflicts.length === 1 ? "s" : ""} and ${conflicts.length === 1 ? "is" : "are"} not managed by Architect Companion:\n${list}\nMove or delete these files, or add the generated-file marker line "${GENERATED_FILE_MARKER}" if Architect Companion should manage them.`,
+    );
   }
 
-  const list = conflicts.map((entry) => `  - ${entry}`).join("\n");
-  throw new InitError(
-    `cannot initialize — the following file${conflicts.length === 1 ? "" : "s"} already exist${conflicts.length === 1 ? "s" : ""} and ${conflicts.length === 1 ? "is" : "are"} not managed by Architect Companion:\n${list}\nMove or delete these files, or add the generated-file marker line "${GENERATED_FILE_MARKER}" if Architect Companion should manage them.`,
-  );
+  return { directories: preExistingDirectories, files: preExistingFiles };
+}
+
+async function recordPreExistingAncestors(
+  projectDir: string,
+  filePath: string,
+  preExistingDirectories: Set<string>,
+): Promise<void> {
+  const resolvedProject = path.resolve(projectDir);
+  let current = path.dirname(filePath);
+
+  while (current !== resolvedProject && current.startsWith(`${resolvedProject}${path.sep}`)) {
+    if (preExistingDirectories.has(current)) {
+      return;
+    }
+    try {
+      const stats = await stat(current);
+      if (stats.isDirectory()) {
+        preExistingDirectories.add(current);
+      }
+    } catch (error: unknown) {
+      if (isNodeError(error) && error.code === "ENOENT") {
+        // Stop walking once a missing ancestor is found.
+        return;
+      }
+      throw error;
+    }
+    current = path.dirname(current);
+  }
 }
 
 function hasGeneratedMarker(source: string): boolean {
