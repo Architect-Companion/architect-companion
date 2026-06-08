@@ -1,0 +1,122 @@
+schemaVersion: 1
+profile:
+  name: typescript-cli
+  version: 0.1.0
+  title: TypeScript CLI
+  summary: Opinionated guidance for building layered, maintainable TypeScript command-line applications.
+defaults:
+  stack: typescript
+  targets:
+    agentsMd: true
+    claudeMd: false
+    cursor: false
+    dependencyCruiser: false
+    githubActions: false
+principles:
+  - id: logic-separated-from-io
+    title: Separate pure business logic from side-effects
+    guidance: >-
+      Core application logic should be isolated from filesystem, network, and system side-effects.
+      This ensures that the domain logic remains testable, deterministic, and easy to reason about
+      without requiring heavy mocking of external systems.
+  - id: cli-as-adapter
+    title: Treat the CLI layer as a thin adapter
+    guidance: >-
+      The CLI layer (argument parsing, stdin/stdout, exit codes) is an external interface,
+      not the application itself. It should parse inputs, construct dependencies, and invoke
+      core logic without implementing business rules directly.
+  - id: strict-layering
+    title: Dependencies flow strictly inward
+    guidance: >-
+      A well-structured CLI follows a layered architecture (e.g., CLI -> Core <- Adapters/IO).
+      Inner layers (Core) must never import from outer layers (CLI, Adapters). Communication
+      from inner to outer layers should happen via dependency injection or returned results.
+policies:
+  - id: cli-entrypoint-responsibility
+    title: CLI entrypoint responsibility
+    intent: The CLI entrypoint only parses arguments, wires dependencies, and handles exit codes.
+    severity: error
+    guidance: >-
+      The CLI layer must not contain business logic, file parsing, or complex data transformations.
+      Its sole responsibility is to translate `process.argv` and standard streams into strongly typed
+      requests for the core layer, and translate core results into console output and exit codes.
+  - id: io-isolation
+    title: I/O isolation
+    intent: Filesystem and network operations are isolated in dedicated modules.
+    severity: error
+    guidance: >-
+      Direct usage of `node:fs`, `node:child_process`, or network clients must be confined to
+      dedicated I/O modules or adapters. Core logic must rely on abstractions or injected functions
+      to interact with the outside world.
+  - id: module-boundaries
+    title: Layer boundaries
+    intent: Inner layers do not depend on outer layers.
+    severity: error
+    guidance: >-
+      Core business logic modules must not import from the CLI argument parser, standard output
+      formatters, or concrete I/O implementations. Cross-layer imports must be declared in
+      allowed_dependencies to ensure the dependency graph flows in one direction.
+    implementation:
+      typescript:
+        engine: dependency-cruiser
+        renderer: dependency-cruiser-config
+workflows:
+  - id: add-command
+    title: Add a new command
+    steps:
+      - Define the core use case or operation independent of the CLI.
+      - Implement the core logic and test it using in-memory or mock data.
+      - Add the command definition to the CLI argument parser.
+      - Wire the parsed arguments to the core use case and map the result to an exit code.
+      - Render and run architecture checks before review.
+  - id: integrate-external-tool
+    title: Integrate an external tool or API
+    steps:
+      - Define an interface or signature in the core layer describing what is needed from the tool.
+      - Implement an adapter that interacts with the tool (e.g., via child_process or HTTP).
+      - Wire the adapter into the core logic at the CLI or composition root.
+heuristics:
+  - id: testability-review
+    title: Testability review
+    questions:
+      - Can the core logic be tested without mocking the file system, network, or process globals?
+      - Are unit tests fast and deterministic?
+  - id: error-handling-review
+    title: Error handling review
+    questions:
+      - Are internal errors properly caught and translated into user-friendly CLI messages?
+      - Does the CLI return the correct non-zero exit codes on failure?
+      - Is sensitive information stripped from terminal error output?
+examples:
+  - id: io-isolation
+    title: I/O isolation
+    good: |-
+      // Core depends on an abstraction
+      export function processProject(config: ProjectConfig, readFile: (path: string) => Promise<string>) {
+        // ...
+      }
+    bad: |-
+      // Core directly imports fs
+      import { readFileSync } from "node:fs";
+
+      export function processProject(config: ProjectConfig) {
+        const file = readFileSync(config.path, "utf8");
+        // ...
+      }
+  - id: cli-logic
+    title: CLI logic separation
+    good: |-
+      // cli.ts
+      import { runCoreWorkflow } from "../core/workflow.js";
+
+      const parsed = parseArgs(process.argv);
+      const result = await runCoreWorkflow(parsed);
+      process.exit(result.success ? 0 : 1);
+    bad: |-
+      // cli.ts
+      const parsed = parseArgs(process.argv);
+      // Business logic inside the CLI
+      if (parsed.force && parsed.clean) {
+         rimraf.sync(parsed.outDir);
+         const built = build(parsed.src);
+      }

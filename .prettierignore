@@ -1,0 +1,6 @@
+.architect-companion/profile.lock.yml
+.dependency-cruiser.cjs
+AGENTS.md
+CLAUDE.md
+.cursor/rules/architect-companion.mdc
+.github/workflows/architecture.yml

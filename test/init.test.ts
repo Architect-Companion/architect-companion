@@ -49,7 +49,15 @@ describe("architect-companion init", () => {
     try {
       const { io, writes } = createIo();
       const exitCode = await runCli(
-        ["init", "--project", projectDir, "--profiles", profilesDir],
+        [
+          "init",
+          "--project",
+          projectDir,
+          "--profiles",
+          profilesDir,
+          "--profile",
+          "modular-monolith",
+        ],
         io,
         cliOptions,
       );
@@ -90,6 +98,8 @@ describe("architect-companion init", () => {
           "--project-name",
           "widgets",
           "--no-render",
+          "--profile",
+          "modular-monolith",
         ],
         io,
         cliOptions,
@@ -114,7 +124,15 @@ describe("architect-companion init", () => {
     try {
       const { io, writes } = createIo();
       const exitCode = await runCli(
-        ["init", "--project", projectDir, "--profiles", profilesDir],
+        [
+          "init",
+          "--project",
+          projectDir,
+          "--profiles",
+          profilesDir,
+          "--profile",
+          "modular-monolith",
+        ],
         io,
         cliOptions,
       );
@@ -140,7 +158,15 @@ describe("architect-companion init", () => {
     try {
       const { io, writes } = createIo();
       const exitCode = await runCli(
-        ["init", "--project", projectDir, "--profiles", profilesDir],
+        [
+          "init",
+          "--project",
+          projectDir,
+          "--profiles",
+          profilesDir,
+          "--profile",
+          "modular-monolith",
+        ],
         io,
         cliOptions,
       );
@@ -165,7 +191,15 @@ describe("architect-companion init", () => {
     try {
       const { io, writes } = createIo();
       const exitCode = await runCli(
-        ["init", "--project", projectDir, "--profiles", profilesDir],
+        [
+          "init",
+          "--project",
+          projectDir,
+          "--profiles",
+          profilesDir,
+          "--profile",
+          "modular-monolith",
+        ],
         io,
         cliOptions,
       );
@@ -197,6 +231,8 @@ describe("architect-companion init", () => {
           "--target",
           "cursor",
           "--dry-run",
+          "--profile",
+          "modular-monolith",
         ],
         io,
         cliOptions,
@@ -223,7 +259,16 @@ describe("architect-companion init", () => {
     try {
       const { io, writes } = createIo();
       const exitCode = await runCli(
-        ["init", "--project", projectDir, "--profiles", profilesDir, "--no-render"],
+        [
+          "init",
+          "--project",
+          projectDir,
+          "--profiles",
+          profilesDir,
+          "--no-render",
+          "--profile",
+          "modular-monolith",
+        ],
         io,
         cliOptions,
       );
@@ -244,7 +289,17 @@ describe("architect-companion init", () => {
     try {
       const { io, writes } = createIo();
       const exitCode = await runCli(
-        ["init", "--project", projectDir, "--profiles", profilesDir, "--target", "cursor"],
+        [
+          "init",
+          "--project",
+          projectDir,
+          "--profiles",
+          profilesDir,
+          "--target",
+          "cursor",
+          "--profile",
+          "modular-monolith",
+        ],
         io,
         cliOptions,
       );
@@ -263,7 +318,17 @@ describe("architect-companion init", () => {
     try {
       const { io } = createIo();
       const exitCode = await runCli(
-        ["init", "--project", projectDir, "--profiles", profilesDir, "--no-target", "agentsMd"],
+        [
+          "init",
+          "--project",
+          projectDir,
+          "--profiles",
+          profilesDir,
+          "--no-target",
+          "agentsMd",
+          "--profile",
+          "modular-monolith",
+        ],
         io,
         cliOptions,
       );
@@ -284,7 +349,17 @@ describe("architect-companion init", () => {
     try {
       const { io, writes } = createIo();
       const exitCode = await runCli(
-        ["init", "--project", projectDir, "--profiles", profilesDir, "--target", "claudeCode"],
+        [
+          "init",
+          "--project",
+          projectDir,
+          "--profiles",
+          profilesDir,
+          "--target",
+          "claudeCode",
+          "--profile",
+          "modular-monolith",
+        ],
         io,
         cliOptions,
       );
@@ -304,7 +379,17 @@ describe("architect-companion init", () => {
     try {
       const { io, writes } = createIo();
       const exitCode = await runCli(
-        ["init", "--project", projectDir, "--profiles", profilesDir, "--stack", "java"],
+        [
+          "init",
+          "--project",
+          projectDir,
+          "--profiles",
+          profilesDir,
+          "--stack",
+          "java",
+          "--profile",
+          "modular-monolith",
+        ],
         io,
         cliOptions,
       );
@@ -333,6 +418,8 @@ describe("architect-companion init", () => {
           "cursor",
           "--no-target",
           "cursor",
+          "--profile",
+          "modular-monolith",
         ],
         io,
         cliOptions,
@@ -388,6 +475,8 @@ describe("architect-companion init", () => {
           "--project-name",
           "custom-name",
           "--no-render",
+          "--profile",
+          "modular-monolith",
         ],
         io,
         cliOptions,
@@ -433,7 +522,15 @@ describe("architect-companion init", () => {
     try {
       const { io, writes } = createIo();
       const exitCode = await runCli(
-        ["init", "--project", projectDir, "--profiles", profilesDir],
+        [
+          "init",
+          "--project",
+          projectDir,
+          "--profiles",
+          profilesDir,
+          "--profile",
+          "modular-monolith",
+        ],
         io,
         cliOptions,
       );
@@ -461,7 +558,15 @@ describe("architect-companion init", () => {
     try {
       const { io } = createIo();
       const exitCode = await runCli(
-        ["init", "--project", projectDir, "--profiles", profilesDir],
+        [
+          "init",
+          "--project",
+          projectDir,
+          "--profiles",
+          profilesDir,
+          "--profile",
+          "modular-monolith",
+        ],
         io,
         cliOptions,
       );
@@ -489,7 +594,17 @@ describe("architect-companion init", () => {
     try {
       const { io } = createIo();
       const exitCode = await runCli(
-        ["init", "--project", projectDir, "--profiles", profilesDir, "--target", "cursor"],
+        [
+          "init",
+          "--project",
+          projectDir,
+          "--profiles",
+          profilesDir,
+          "--target",
+          "cursor",
+          "--profile",
+          "modular-monolith",
+        ],
         io,
         cliOptions,
       );

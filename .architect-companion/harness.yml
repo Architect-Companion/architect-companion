@@ -1,0 +1,13 @@
+schemaVersion: 1
+profile:
+  name: typescript-cli
+  version: 0.1.0
+project:
+  name: architect-companion
+modules: architecture/modules.yml
+stack: typescript
+targets:
+  claudeMd: true
+  cursor: true
+  dependencyCruiser: true
+  githubActions: true

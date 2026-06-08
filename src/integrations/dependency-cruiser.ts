@@ -281,7 +281,7 @@ function toNormalizedViolationSeverity(severity: string): NormalizedViolationSev
 }
 
 function assertPublicApiWithinModule(module: EffectiveHarnessModel["modules"][number]): void {
-  if (!module.publicApi.startsWith(`${module.path}/`)) {
+  if (!module.publicApi.startsWith(`${module.path}/`) && module.publicApi !== module.path) {
     throw new DependencyCruiserIntegrationError(
       `${module.name} public API "${module.publicApi}" must be inside module path "${module.path}" to generate dependency-cruiser rules.`,
     );
@@ -293,6 +293,9 @@ function modulePathPattern(modulePath: string): string {
 }
 
 function moduleInternalPathPattern(modulePath: string, publicApiPath: string): string {
+  if (modulePath === publicApiPath) {
+    return `^$`;
+  }
   return `^(?!${escapeRegExp(publicApiPath)}$)${escapeRegExp(modulePath)}(?:/|$)`;
 }
 
