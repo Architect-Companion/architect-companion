@@ -7,11 +7,13 @@ import { fileURLToPath } from "node:url";
 import { computeCapabilityWarnings } from "./diagnostics/capability-warnings.js";
 import { doctorReportHasIssues, formatDoctorReport, runDoctor } from "./diagnostics/doctor.js";
 import { InitError, runInit } from "./init/init.js";
+import { runInitWizard } from "./init/prompts.js";
 import {
   discoverProfileNames,
   HarnessConfigError,
   knownTargetKeys,
   loadEffectiveHarnessModel,
+  loadProfileMetadata,
   serializeEffectiveHarnessModel,
   supportedStacks,
 } from "./model/effective-model.js";
@@ -46,6 +48,9 @@ Commands:
   init
       Bootstrap .architect-companion/ from a selected profile and render the
       enabled targets. Refuses to run when .architect-companion/ already exists.
+      Runs an interactive wizard when stdin is a TTY and any input is missing
+      from flags; otherwise uses sensible defaults or fails fast on missing
+      required inputs.
   inspect effective-model
       Validate the harness inputs and print the resolved effective model as JSON.
   render
@@ -183,13 +188,16 @@ async function runInitCommand(args: string[], io: CliIo, options: CliOptions): P
     return 1;
   }
 
-  const initInputs = await resolveInitInputs(parsedOptions.options, io);
-  if (initInputs === undefined) {
+  const resolution = await resolveInitInputs(parsedOptions.options, io);
+  if (resolution === "cancelled") {
+    return 130;
+  }
+  if (resolution === undefined) {
     return 1;
   }
 
   try {
-    return await runInit(initInputs, io);
+    return await runInit(resolution, io);
   } catch (error: unknown) {
     if (
       error instanceof InitError ||
@@ -202,6 +210,19 @@ async function runInitCommand(args: string[], io: CliIo, options: CliOptions): P
     }
     throw error;
   }
+}
+
+function shouldRunWizard(parsed: InitParsedOptions): boolean {
+  if (process.stdin.isTTY !== true) {
+    return false;
+  }
+  const targetsExplicit = parsed.enabledTargets.length > 0 || parsed.disabledTargets.length > 0;
+  return (
+    parsed.profile === undefined ||
+    parsed.projectName === undefined ||
+    parsed.stack === undefined ||
+    !targetsExplicit
+  );
 }
 
 async function runInspectCommand(args: string[], io: CliIo, options: CliOptions): Promise<number> {
@@ -603,6 +624,17 @@ function parseInitOptions(
 async function resolveInitInputs(
   parsed: InitParsedOptions,
   io: CliIo,
+): Promise<Parameters<typeof runInit>[0] | "cancelled" | undefined> {
+  if (shouldRunWizard(parsed)) {
+    return resolveInitInputsInteractive(parsed, io);
+  }
+
+  return resolveInitInputsNonInteractive(parsed, io);
+}
+
+async function resolveInitInputsNonInteractive(
+  parsed: InitParsedOptions,
+  io: CliIo,
 ): Promise<Parameters<typeof runInit>[0] | undefined> {
   let profileName = parsed.profile;
   if (profileName === undefined) {
@@ -647,6 +679,79 @@ async function resolveInitInputs(
   };
   if (parsed.stack !== undefined) {
     initInputs.stack = parsed.stack;
+  }
+  return initInputs;
+}
+
+async function resolveInitInputsInteractive(
+  parsed: InitParsedOptions,
+  io: CliIo,
+): Promise<Parameters<typeof runInit>[0] | "cancelled" | undefined> {
+  let installedProfiles: string[];
+  try {
+    installedProfiles = await discoverProfileNames(parsed.profilesDir);
+  } catch (error: unknown) {
+    if (error instanceof HarnessConfigError) {
+      io.stderr.write(`${error.message}\n`);
+      return undefined;
+    }
+    throw error;
+  }
+
+  const wizardOptions: Parameters<typeof runInitWizard>[0] = {
+    defaultProjectName: defaultProjectName(parsed.projectDir),
+    installedProfiles,
+    loadProfile: async (name) => {
+      try {
+        return await loadProfileMetadata(parsed.profilesDir, name);
+      } catch (error: unknown) {
+        if (error instanceof HarnessConfigError) {
+          throw new InitError(error.message);
+        }
+        throw error;
+      }
+    },
+    presetTargetsExplicit: parsed.enabledTargets.length > 0 || parsed.disabledTargets.length > 0,
+  };
+  if (parsed.profile !== undefined) {
+    wizardOptions.presetProfileName = parsed.profile;
+  }
+  if (parsed.projectName !== undefined) {
+    wizardOptions.presetProjectName = parsed.projectName;
+  }
+  if (parsed.stack !== undefined) {
+    wizardOptions.presetStack = parsed.stack;
+  }
+
+  let result;
+  try {
+    result = await runInitWizard(wizardOptions);
+  } catch (error: unknown) {
+    if (error instanceof InitError) {
+      io.stderr.write(`${error.message}\n`);
+      return undefined;
+    }
+    throw error;
+  }
+
+  if (result.cancelled) {
+    return "cancelled";
+  }
+
+  const initInputs: Parameters<typeof runInit>[0] = {
+    disabledTargets:
+      parsed.disabledTargets.length > 0 ? parsed.disabledTargets : result.disabledTargets,
+    dryRun: parsed.dryRun,
+    enabledTargets:
+      parsed.enabledTargets.length > 0 ? parsed.enabledTargets : result.enabledTargets,
+    noRender: parsed.noRender,
+    profileName: result.profileName,
+    profilesDir: parsed.profilesDir,
+    projectDir: parsed.projectDir,
+    projectName: result.projectName,
+  };
+  if (result.stack !== undefined) {
+    initInputs.stack = result.stack;
   }
   return initInputs;
 }

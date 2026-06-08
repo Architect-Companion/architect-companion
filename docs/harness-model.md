@@ -143,12 +143,12 @@ A typical setup flow is:
 architect-companion init
 ```
 
-`init` resolves the profile, stack, project name, and target selections from
-flags (auto-detecting sensible defaults), pre-flights the working tree for
-conflicts, then scaffolds `.architect-companion/` and renders the enabled
-targets in one atomic step. A wizard layer that fills missing flags
-interactively will land in a follow-up commit; see [Init Command](init.md)
-for the full contract, flag surface, and failure modes.
+`init` resolves the profile, stack, project name, and target selections —
+either from flags, from an interactive wizard when stdin is a TTY, or from
+sensible defaults — pre-flights the working tree for conflicts, then
+scaffolds `.architect-companion/` and renders the enabled targets in one
+atomic step. See [Init Command](init.md) for the full contract, flag surface,
+and failure modes.
 
 After init, the user keeps working with their preferred tools:
 

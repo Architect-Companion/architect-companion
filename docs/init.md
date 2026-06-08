@@ -54,15 +54,32 @@ unknown keys fail fast with the allowed list.
 
 ## Behavior in detail
 
+### Interactive wizard vs. flag-driven
+
+`init` runs an interactive wizard when stdin is a TTY and at least one of
+project name, profile, stack, or targets is not supplied via flags. In the
+wizard, flags pre-fill values so the user is only prompted for what was
+missing.
+
+When stdin is not a TTY (CI, piped input, agent automation), `init` runs
+non-interactively: every missing value uses its default (auto-picked profile
+if only one is installed, dirname-derived project name, profile-default stack
+and targets). When no default is available — for example, multiple profiles
+installed and no `--profile` flag — the command exits with a helpful error.
+
+Cancelling the wizard (Ctrl-C, dismissing a prompt, declining the
+confirmation) exits 130 without writing anything.
+
 ### Profile resolution
 
 `init` reads the profiles directory and treats each subdirectory containing a
 `profile.yml` as an installed profile. When `--profile` is omitted:
 
-- one installed profile → auto-pick it (no prompt today; the wizard layer will
-  surface a single-option select once present).
-- multiple installed profiles → fail with the list and instruct the user to
-  pass `--profile`.
+- one installed profile → auto-pick it. In the wizard this is announced as a
+  note; in flag-driven mode it is silent.
+- multiple installed profiles → in the wizard, present a single-select. In
+  flag-driven mode, exit with the list and instruct the user to pass
+  `--profile`.
 
 When `--profile` is given, the named profile must exist; the profile's
 declared `profile.name` field must match the directory name.
@@ -134,10 +151,12 @@ Lives in [`src/init/`](../src/init/):
 - `preflight.ts` — pre-flight checks: existing-directory refusal, profile and
   stack validation, target merging, render-target conflict detection.
 - `scaffold.ts` — formatters and writers for `harness.yml` and `modules.yml`.
+- `prompts.ts` — interactive wizard built on `@clack/prompts`.
 - `errors.ts` — `InitError` class.
 
-The CLI parses init's flag surface in `src/cli.ts:runInitCommand` and calls
-into `runInit`.
+The CLI parses init's flag surface in `src/cli.ts:runInitCommand`, decides
+between interactive and non-interactive resolution, and calls into `runInit`
+with the resolved inputs.
 
 The pre-flight uses `getRendererOutputs(targets)` exported from
 [`src/render/render.ts`](../src/render/render.ts), which mirrors the logic
@@ -146,8 +165,9 @@ which renderers a target enables.
 
 ## Dependencies
 
-Phase 1 (flag-driven init) uses only Node's built-ins and the existing `yaml`
-dependency. The wizard layer adds `@clack/prompts`. The dependency
-carve-out: prompt UX is leaf-level and does not shape the harness model,
-which makes it acceptable under the project's general preference for
-avoiding solo-maintainer dependencies.
+The wizard layer pulls in `@clack/prompts`. This is a deliberate carve-out
+from the project's general preference for avoiding solo-maintainer
+dependencies: prompt UX is leaf-level and does not shape the harness model,
+so swapping `@clack/prompts` for another library (or hand-rolled prompts) is
+contained inside `src/init/prompts.ts`. The non-interactive code paths used
+in CI and agent automation do not depend on the wizard module.
