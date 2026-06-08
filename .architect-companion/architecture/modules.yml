@@ -1,35 +1,35 @@
 schemaVersion: 1
 modules:
   - name: cli
-    path: "src"
+    path: "src/cli.ts"
     public_api: "src/cli.ts"
   - name: init
     path: "src/init"
-    public_api: "src/init/init.ts"
+    public_api: "src/init"
   - name: model
     path: "src/model"
-    public_api: "src/model/effective-model.ts"
+    public_api: "src/model"
   - name: render
     path: "src/render"
-    public_api: "src/render/render.ts"
+    public_api: "src/render"
   - name: renderers
     path: "src/renderers"
-    public_api: "src/renderers/index.ts"
+    public_api: "src/renderers"
   - name: integrations
     path: "src/integrations"
-    public_api: "src/integrations/index.ts"
+    public_api: "src/integrations"
   - name: checks
     path: "src/checks"
-    public_api: "src/checks/architecture-check-commands.ts"
+    public_api: "src/checks"
   - name: diagnostics
     path: "src/diagnostics"
-    public_api: "src/diagnostics/doctor.ts"
+    public_api: "src/diagnostics"
   - name: io
     path: "src/io"
-    public_api: "src/io/path-safety.ts"
+    public_api: "src/io"
   - name: targets
     path: "src/targets"
-    public_api: "src/targets/target-registry.ts"
+    public_api: "src/targets"
 
 allowed_dependencies:
   cli:
@@ -38,22 +38,34 @@ allowed_dependencies:
     - render
     - diagnostics
     - io
+    - integrations
+    - checks
   init:
     - model
     - render
     - io
-  model: []
+  model:
+    - targets
+    - io
   render:
     - model
     - renderers
     - io
+    - targets
+    - integrations
   renderers:
     - model
     - targets
+    - render
+    - checks
   integrations:
     - model
-  checks: []
+  checks:
+    - model
+    - integrations
   diagnostics:
     - model
+    - integrations
+    - checks
   io: []
   targets: []

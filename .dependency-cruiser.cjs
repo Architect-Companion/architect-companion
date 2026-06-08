@@ -10,7 +10,7 @@ module.exports = {
       "name": "architect-companion/module-boundaries/checks-to-cli/undeclared-dependency",
       "severity": "error",
       "to": {
-        "path": "^src(?:/|$)"
+        "path": "^src/cli\\.ts(?:/|$)"
       }
     },
     {
@@ -36,14 +36,14 @@ module.exports = {
       }
     },
     {
-      "comment": "checks does not declare integrations as an allowed module dependency.",
+      "comment": "checks may depend on integrations only through src/integrations.",
       "from": {
         "path": "^src/checks(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/checks-to-integrations/undeclared-dependency",
+      "name": "architect-companion/module-boundaries/checks-to-integrations/internal-import",
       "severity": "error",
       "to": {
-        "path": "^src/integrations(?:/|$)"
+        "path": "^$"
       }
     },
     {
@@ -58,14 +58,14 @@ module.exports = {
       }
     },
     {
-      "comment": "checks does not declare model as an allowed module dependency.",
+      "comment": "checks may depend on model only through src/model.",
       "from": {
         "path": "^src/checks(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/checks-to-model/undeclared-dependency",
+      "name": "architect-companion/module-boundaries/checks-to-model/internal-import",
       "severity": "error",
       "to": {
-        "path": "^src/model(?:/|$)"
+        "path": "^$"
       }
     },
     {
@@ -102,86 +102,86 @@ module.exports = {
       }
     },
     {
-      "comment": "cli does not declare checks as an allowed module dependency.",
+      "comment": "cli may depend on checks only through src/checks.",
       "from": {
-        "path": "^src(?:/|$)"
+        "path": "^src/cli\\.ts(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/cli-to-checks/undeclared-dependency",
+      "name": "architect-companion/module-boundaries/cli-to-checks/internal-import",
       "severity": "error",
       "to": {
-        "path": "^src/checks(?:/|$)"
+        "path": "^$"
       }
     },
     {
-      "comment": "cli may depend on diagnostics only through src/diagnostics/doctor.ts.",
+      "comment": "cli may depend on diagnostics only through src/diagnostics.",
       "from": {
-        "path": "^src(?:/|$)"
+        "path": "^src/cli\\.ts(?:/|$)"
       },
       "name": "architect-companion/module-boundaries/cli-to-diagnostics/internal-import",
       "severity": "error",
       "to": {
-        "path": "^(?!src/diagnostics/doctor\\.ts$)src/diagnostics(?:/|$)"
+        "path": "^$"
       }
     },
     {
-      "comment": "cli may depend on init only through src/init/init.ts.",
+      "comment": "cli may depend on init only through src/init.",
       "from": {
-        "path": "^src(?:/|$)"
+        "path": "^src/cli\\.ts(?:/|$)"
       },
       "name": "architect-companion/module-boundaries/cli-to-init/internal-import",
       "severity": "error",
       "to": {
-        "path": "^(?!src/init/init\\.ts$)src/init(?:/|$)"
+        "path": "^$"
       }
     },
     {
-      "comment": "cli does not declare integrations as an allowed module dependency.",
+      "comment": "cli may depend on integrations only through src/integrations.",
       "from": {
-        "path": "^src(?:/|$)"
+        "path": "^src/cli\\.ts(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/cli-to-integrations/undeclared-dependency",
+      "name": "architect-companion/module-boundaries/cli-to-integrations/internal-import",
       "severity": "error",
       "to": {
-        "path": "^src/integrations(?:/|$)"
+        "path": "^$"
       }
     },
     {
-      "comment": "cli may depend on io only through src/io/path-safety.ts.",
+      "comment": "cli may depend on io only through src/io.",
       "from": {
-        "path": "^src(?:/|$)"
+        "path": "^src/cli\\.ts(?:/|$)"
       },
       "name": "architect-companion/module-boundaries/cli-to-io/internal-import",
       "severity": "error",
       "to": {
-        "path": "^(?!src/io/path-safety\\.ts$)src/io(?:/|$)"
+        "path": "^$"
       }
     },
     {
-      "comment": "cli may depend on model only through src/model/effective-model.ts.",
+      "comment": "cli may depend on model only through src/model.",
       "from": {
-        "path": "^src(?:/|$)"
+        "path": "^src/cli\\.ts(?:/|$)"
       },
       "name": "architect-companion/module-boundaries/cli-to-model/internal-import",
       "severity": "error",
       "to": {
-        "path": "^(?!src/model/effective-model\\.ts$)src/model(?:/|$)"
+        "path": "^$"
       }
     },
     {
-      "comment": "cli may depend on render only through src/render/render.ts.",
+      "comment": "cli may depend on render only through src/render.",
       "from": {
-        "path": "^src(?:/|$)"
+        "path": "^src/cli\\.ts(?:/|$)"
       },
       "name": "architect-companion/module-boundaries/cli-to-render/internal-import",
       "severity": "error",
       "to": {
-        "path": "^(?!src/render/render\\.ts$)src/render(?:/|$)"
+        "path": "^$"
       }
     },
     {
       "comment": "cli does not declare renderers as an allowed module dependency.",
       "from": {
-        "path": "^src(?:/|$)"
+        "path": "^src/cli\\.ts(?:/|$)"
       },
       "name": "architect-companion/module-boundaries/cli-to-renderers/undeclared-dependency",
       "severity": "error",
@@ -192,7 +192,7 @@ module.exports = {
     {
       "comment": "cli does not declare targets as an allowed module dependency.",
       "from": {
-        "path": "^src(?:/|$)"
+        "path": "^src/cli\\.ts(?:/|$)"
       },
       "name": "architect-companion/module-boundaries/cli-to-targets/undeclared-dependency",
       "severity": "error",
@@ -201,14 +201,14 @@ module.exports = {
       }
     },
     {
-      "comment": "diagnostics does not declare checks as an allowed module dependency.",
+      "comment": "diagnostics may depend on checks only through src/checks.",
       "from": {
         "path": "^src/diagnostics(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/diagnostics-to-checks/undeclared-dependency",
+      "name": "architect-companion/module-boundaries/diagnostics-to-checks/internal-import",
       "severity": "error",
       "to": {
-        "path": "^src/checks(?:/|$)"
+        "path": "^$"
       }
     },
     {
@@ -219,7 +219,7 @@ module.exports = {
       "name": "architect-companion/module-boundaries/diagnostics-to-cli/undeclared-dependency",
       "severity": "error",
       "to": {
-        "path": "^src(?:/|$)"
+        "path": "^src/cli\\.ts(?:/|$)"
       }
     },
     {
@@ -234,14 +234,14 @@ module.exports = {
       }
     },
     {
-      "comment": "diagnostics does not declare integrations as an allowed module dependency.",
+      "comment": "diagnostics may depend on integrations only through src/integrations.",
       "from": {
         "path": "^src/diagnostics(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/diagnostics-to-integrations/undeclared-dependency",
+      "name": "architect-companion/module-boundaries/diagnostics-to-integrations/internal-import",
       "severity": "error",
       "to": {
-        "path": "^src/integrations(?:/|$)"
+        "path": "^$"
       }
     },
     {
@@ -256,14 +256,14 @@ module.exports = {
       }
     },
     {
-      "comment": "diagnostics may depend on model only through src/model/effective-model.ts.",
+      "comment": "diagnostics may depend on model only through src/model.",
       "from": {
         "path": "^src/diagnostics(?:/|$)"
       },
       "name": "architect-companion/module-boundaries/diagnostics-to-model/internal-import",
       "severity": "error",
       "to": {
-        "path": "^(?!src/model/effective-model\\.ts$)src/model(?:/|$)"
+        "path": "^$"
       }
     },
     {
@@ -318,7 +318,7 @@ module.exports = {
       "name": "architect-companion/module-boundaries/init-to-cli/undeclared-dependency",
       "severity": "error",
       "to": {
-        "path": "^src(?:/|$)"
+        "path": "^src/cli\\.ts(?:/|$)"
       }
     },
     {
@@ -344,36 +344,36 @@ module.exports = {
       }
     },
     {
-      "comment": "init may depend on io only through src/io/path-safety.ts.",
+      "comment": "init may depend on io only through src/io.",
       "from": {
         "path": "^src/init(?:/|$)"
       },
       "name": "architect-companion/module-boundaries/init-to-io/internal-import",
       "severity": "error",
       "to": {
-        "path": "^(?!src/io/path-safety\\.ts$)src/io(?:/|$)"
+        "path": "^$"
       }
     },
     {
-      "comment": "init may depend on model only through src/model/effective-model.ts.",
+      "comment": "init may depend on model only through src/model.",
       "from": {
         "path": "^src/init(?:/|$)"
       },
       "name": "architect-companion/module-boundaries/init-to-model/internal-import",
       "severity": "error",
       "to": {
-        "path": "^(?!src/model/effective-model\\.ts$)src/model(?:/|$)"
+        "path": "^$"
       }
     },
     {
-      "comment": "init may depend on render only through src/render/render.ts.",
+      "comment": "init may depend on render only through src/render.",
       "from": {
         "path": "^src/init(?:/|$)"
       },
       "name": "architect-companion/module-boundaries/init-to-render/internal-import",
       "severity": "error",
       "to": {
-        "path": "^(?!src/render/render\\.ts$)src/render(?:/|$)"
+        "path": "^$"
       }
     },
     {
@@ -417,7 +417,7 @@ module.exports = {
       "name": "architect-companion/module-boundaries/integrations-to-cli/undeclared-dependency",
       "severity": "error",
       "to": {
-        "path": "^src(?:/|$)"
+        "path": "^src/cli\\.ts(?:/|$)"
       }
     },
     {
@@ -454,14 +454,14 @@ module.exports = {
       }
     },
     {
-      "comment": "integrations may depend on model only through src/model/effective-model.ts.",
+      "comment": "integrations may depend on model only through src/model.",
       "from": {
         "path": "^src/integrations(?:/|$)"
       },
       "name": "architect-companion/module-boundaries/integrations-to-model/internal-import",
       "severity": "error",
       "to": {
-        "path": "^(?!src/model/effective-model\\.ts$)src/model(?:/|$)"
+        "path": "^$"
       }
     },
     {
@@ -516,7 +516,7 @@ module.exports = {
       "name": "architect-companion/module-boundaries/io-to-cli/undeclared-dependency",
       "severity": "error",
       "to": {
-        "path": "^src(?:/|$)"
+        "path": "^src/cli\\.ts(?:/|$)"
       }
     },
     {
@@ -615,7 +615,7 @@ module.exports = {
       "name": "architect-companion/module-boundaries/model-to-cli/undeclared-dependency",
       "severity": "error",
       "to": {
-        "path": "^src(?:/|$)"
+        "path": "^src/cli\\.ts(?:/|$)"
       }
     },
     {
@@ -652,14 +652,14 @@ module.exports = {
       }
     },
     {
-      "comment": "model does not declare io as an allowed module dependency.",
+      "comment": "model may depend on io only through src/io.",
       "from": {
         "path": "^src/model(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/model-to-io/undeclared-dependency",
+      "name": "architect-companion/module-boundaries/model-to-io/internal-import",
       "severity": "error",
       "to": {
-        "path": "^src/io(?:/|$)"
+        "path": "^$"
       }
     },
     {
@@ -685,14 +685,14 @@ module.exports = {
       }
     },
     {
-      "comment": "model does not declare targets as an allowed module dependency.",
+      "comment": "model may depend on targets only through src/targets.",
       "from": {
         "path": "^src/model(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/model-to-targets/undeclared-dependency",
+      "name": "architect-companion/module-boundaries/model-to-targets/internal-import",
       "severity": "error",
       "to": {
-        "path": "^src/targets(?:/|$)"
+        "path": "^$"
       }
     },
     {
@@ -714,7 +714,7 @@ module.exports = {
       "name": "architect-companion/module-boundaries/render-to-cli/undeclared-dependency",
       "severity": "error",
       "to": {
-        "path": "^src(?:/|$)"
+        "path": "^src/cli\\.ts(?:/|$)"
       }
     },
     {
@@ -740,69 +740,69 @@ module.exports = {
       }
     },
     {
-      "comment": "render does not declare integrations as an allowed module dependency.",
+      "comment": "render may depend on integrations only through src/integrations.",
       "from": {
         "path": "^src/render(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/render-to-integrations/undeclared-dependency",
+      "name": "architect-companion/module-boundaries/render-to-integrations/internal-import",
       "severity": "error",
       "to": {
-        "path": "^src/integrations(?:/|$)"
+        "path": "^$"
       }
     },
     {
-      "comment": "render may depend on io only through src/io/path-safety.ts.",
+      "comment": "render may depend on io only through src/io.",
       "from": {
         "path": "^src/render(?:/|$)"
       },
       "name": "architect-companion/module-boundaries/render-to-io/internal-import",
       "severity": "error",
       "to": {
-        "path": "^(?!src/io/path-safety\\.ts$)src/io(?:/|$)"
+        "path": "^$"
       }
     },
     {
-      "comment": "render may depend on model only through src/model/effective-model.ts.",
+      "comment": "render may depend on model only through src/model.",
       "from": {
         "path": "^src/render(?:/|$)"
       },
       "name": "architect-companion/module-boundaries/render-to-model/internal-import",
       "severity": "error",
       "to": {
-        "path": "^(?!src/model/effective-model\\.ts$)src/model(?:/|$)"
+        "path": "^$"
       }
     },
     {
-      "comment": "render may depend on renderers only through src/renderers/index.ts.",
+      "comment": "render may depend on renderers only through src/renderers.",
       "from": {
         "path": "^src/render(?:/|$)"
       },
       "name": "architect-companion/module-boundaries/render-to-renderers/internal-import",
       "severity": "error",
       "to": {
-        "path": "^(?!src/renderers/index\\.ts$)src/renderers(?:/|$)"
+        "path": "^$"
       }
     },
     {
-      "comment": "render does not declare targets as an allowed module dependency.",
+      "comment": "render may depend on targets only through src/targets.",
       "from": {
         "path": "^src/render(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/render-to-targets/undeclared-dependency",
+      "name": "architect-companion/module-boundaries/render-to-targets/internal-import",
       "severity": "error",
       "to": {
-        "path": "^src/targets(?:/|$)"
+        "path": "^$"
       }
     },
     {
-      "comment": "renderers does not declare checks as an allowed module dependency.",
+      "comment": "renderers may depend on checks only through src/checks.",
       "from": {
         "path": "^src/renderers(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/renderers-to-checks/undeclared-dependency",
+      "name": "architect-companion/module-boundaries/renderers-to-checks/internal-import",
       "severity": "error",
       "to": {
-        "path": "^src/checks(?:/|$)"
+        "path": "^$"
       }
     },
     {
@@ -813,7 +813,7 @@ module.exports = {
       "name": "architect-companion/module-boundaries/renderers-to-cli/undeclared-dependency",
       "severity": "error",
       "to": {
-        "path": "^src(?:/|$)"
+        "path": "^src/cli\\.ts(?:/|$)"
       }
     },
     {
@@ -861,36 +861,36 @@ module.exports = {
       }
     },
     {
-      "comment": "renderers may depend on model only through src/model/effective-model.ts.",
+      "comment": "renderers may depend on model only through src/model.",
       "from": {
         "path": "^src/renderers(?:/|$)"
       },
       "name": "architect-companion/module-boundaries/renderers-to-model/internal-import",
       "severity": "error",
       "to": {
-        "path": "^(?!src/model/effective-model\\.ts$)src/model(?:/|$)"
+        "path": "^$"
       }
     },
     {
-      "comment": "renderers does not declare render as an allowed module dependency.",
+      "comment": "renderers may depend on render only through src/render.",
       "from": {
         "path": "^src/renderers(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/renderers-to-render/undeclared-dependency",
+      "name": "architect-companion/module-boundaries/renderers-to-render/internal-import",
       "severity": "error",
       "to": {
-        "path": "^src/render(?:/|$)"
+        "path": "^$"
       }
     },
     {
-      "comment": "renderers may depend on targets only through src/targets/target-registry.ts.",
+      "comment": "renderers may depend on targets only through src/targets.",
       "from": {
         "path": "^src/renderers(?:/|$)"
       },
       "name": "architect-companion/module-boundaries/renderers-to-targets/internal-import",
       "severity": "error",
       "to": {
-        "path": "^(?!src/targets/target-registry\\.ts$)src/targets(?:/|$)"
+        "path": "^$"
       }
     },
     {
@@ -912,7 +912,7 @@ module.exports = {
       "name": "architect-companion/module-boundaries/targets-to-cli/undeclared-dependency",
       "severity": "error",
       "to": {
-        "path": "^src(?:/|$)"
+        "path": "^src/cli\\.ts(?:/|$)"
       }
     },
     {

@@ -41,34 +41,34 @@ Core business logic modules must not import from the CLI argument parser, standa
 ## Modules
 
 - checks: src/checks
-  Public API: src/checks/architecture-check-commands.ts
-  Allowed dependencies: none
-- cli: src
+  Public API: src/checks
+  Allowed dependencies: integrations, model
+- cli: src/cli.ts
   Public API: src/cli.ts
-  Allowed dependencies: diagnostics, init, io, model, render
+  Allowed dependencies: checks, diagnostics, init, integrations, io, model, render
 - diagnostics: src/diagnostics
-  Public API: src/diagnostics/doctor.ts
-  Allowed dependencies: model
+  Public API: src/diagnostics
+  Allowed dependencies: checks, integrations, model
 - init: src/init
-  Public API: src/init/init.ts
+  Public API: src/init
   Allowed dependencies: io, model, render
 - integrations: src/integrations
-  Public API: src/integrations/index.ts
+  Public API: src/integrations
   Allowed dependencies: model
 - io: src/io
-  Public API: src/io/path-safety.ts
+  Public API: src/io
   Allowed dependencies: none
 - model: src/model
-  Public API: src/model/effective-model.ts
-  Allowed dependencies: none
+  Public API: src/model
+  Allowed dependencies: io, targets
 - render: src/render
-  Public API: src/render/render.ts
-  Allowed dependencies: io, model, renderers
+  Public API: src/render
+  Allowed dependencies: integrations, io, model, renderers, targets
 - renderers: src/renderers
-  Public API: src/renderers/index.ts
-  Allowed dependencies: model, targets
+  Public API: src/renderers
+  Allowed dependencies: checks, model, render, targets
 - targets: src/targets
-  Public API: src/targets/target-registry.ts
+  Public API: src/targets
   Allowed dependencies: none
 
 ## Workflows
