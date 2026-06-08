@@ -10,6 +10,7 @@ Read the documents that match the task at hand:
 
 - [Product Thesis](product-thesis.md): product framing, scope, and non-goals.
 - [Harness Model](harness-model.md): canonical harness, generated targets, and agent-neutral source/target design.
+- [Init Command](init.md): bootstrap command contract, flags, atomicity, and failure modes.
 - [Effective Harness Model](effective-harness-model.md): schemas, merge rules, validation rules, and inspect command.
 - [Profile Model](profile-model.md): reusable architecture profiles and project-specific harness instances.
 - [Architecture Knowledge](architecture-knowledge.md): where architectural knowledge is encoded.
@@ -43,6 +44,7 @@ For CLI, checks, CI, or tool-integration changes, read:
 1. [Effective Harness Model](effective-harness-model.md)
 2. [Rendering And Checks](rendering-and-checks.md)
 3. [Harness Model](harness-model.md)
+4. [Init Command](init.md) (only if you are touching bootstrap behavior)
 
 For decisions that should remain stable across future discussions, read:
 

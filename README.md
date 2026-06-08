@@ -27,7 +27,7 @@ npm run build
 node dist/cli.js --help
 ```
 
-The CLI exposes `architect-companion --help`, `architect-companion --version`, `architect-companion inspect effective-model`, `architect-companion render`, `architect-companion render --check`, `architect-companion doctor`, and `architect-companion upgrade-profile`.
+The CLI exposes `architect-companion --help`, `architect-companion --version`, `architect-companion init`, `architect-companion inspect effective-model`, `architect-companion render`, `architect-companion render --check`, `architect-companion doctor`, and `architect-companion upgrade-profile`.
 
 ## Repository Contents
 
@@ -36,6 +36,7 @@ The CLI exposes `architect-companion --help`, `architect-companion --version`, `
 - [docs/README.md](docs/README.md): documentation overview and reading guide
 - [docs/product-thesis.md](docs/product-thesis.md): product thesis and design rationale
 - [docs/harness-model.md](docs/harness-model.md): tool-independent harness model and target rendering approach
+- [docs/init.md](docs/init.md): bootstrap command contract, flags, atomicity, and failure modes
 - [docs/architecture-knowledge.md](docs/architecture-knowledge.md): where architectural knowledge is encoded
 - [docs/profile-model.md](docs/profile-model.md): how reusable architecture profiles are structured
 - [docs/rendering-and-checks.md](docs/rendering-and-checks.md): deterministic rendering, CI adapters, and the boundary between deterministic checks and AI-assisted review

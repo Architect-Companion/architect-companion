@@ -36,22 +36,36 @@ See [`docs/harness-model.md`](docs/harness-model.md) and
 
 The implementation is a small TypeScript ESM package organized as follows.
 
-| Layer        | Path                | Responsibility                                                             |
-| ------------ | ------------------- | -------------------------------------------------------------------------- |
-| CLI          | `src/cli.ts`        | Argument parsing, command dispatch, exit codes, error mapping.             |
-| Model        | `src/model/`        | Load, validate, merge profile + harness + module metadata; profile lock.   |
-| Render       | `src/render/`       | Orchestrate selected renderers, enforce generated-file safety.             |
-| Renderers    | `src/renderers/`    | Target-specific projections (e.g. GitHub Actions workflow).                |
-| Integrations | `src/integrations/` | External-engine adapters (e.g. dependency-cruiser config + commands).      |
-| Checks       | `src/checks/`       | Target-neutral architecture check commands consumed by CI renderers.       |
-| Diagnostics  | `src/diagnostics/`  | Doctor and capability-warning helpers behind the `doctor` command.         |
-| I/O          | `src/io/`           | Shared filesystem safety primitives (path containment, symlink rejection). |
+| Layer        | Path                | Responsibility                                                                            |
+| ------------ | ------------------- | ----------------------------------------------------------------------------------------- |
+| CLI          | `src/cli.ts`        | Argument parsing, command dispatch, exit codes, error mapping.                            |
+| Init         | `src/init/`         | Scaffold `.architect-companion/`, write the profile lock, invoke render; atomic rollback. |
+| Model        | `src/model/`        | Load, validate, merge profile + harness + module metadata; profile lock.                  |
+| Render       | `src/render/`       | Orchestrate selected renderers, enforce generated-file safety.                            |
+| Renderers    | `src/renderers/`    | Target-specific projections (e.g. GitHub Actions workflow).                               |
+| Integrations | `src/integrations/` | External-engine adapters (e.g. dependency-cruiser config + commands).                     |
+| Checks       | `src/checks/`       | Target-neutral architecture check commands consumed by CI renderers.                      |
+| Diagnostics  | `src/diagnostics/`  | Doctor and capability-warning helpers behind the `doctor` command.                        |
+| I/O          | `src/io/`           | Shared filesystem safety primitives (path containment, symlink rejection).                |
 
 Dependencies flow downward only: renderers and integrations depend on the
 model; the model has no inbound dependency on either. The CLI is the only
 entrypoint that wires them together.
 
 ## Data Flow
+
+`architect-companion init`:
+
+1. Pre-flight: refuse if `.architect-companion/` already exists; refuse if any
+   would-be render-target path conflicts with an existing unmarked file.
+2. Write `.architect-companion/harness.yml` and
+   `.architect-companion/architecture/modules.yml` (an empty-but-valid module
+   stub).
+3. Resolve the effective model, write `.architect-companion/profile.lock.yml`.
+4. Invoke the render pipeline.
+5. Any failure or SIGINT rolls back every file the command created.
+
+See [`docs/init.md`](docs/init.md) for the full contract.
 
 `architect-companion inspect effective-model`:
 

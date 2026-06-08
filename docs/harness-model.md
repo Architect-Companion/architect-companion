@@ -118,7 +118,7 @@ architect-companion explain
 
 Possible meanings:
 
-- `init`: create `.architect-companion/` from a selected profile.
+- `init`: scaffold `.architect-companion/` from a selected profile and render the enabled targets in a single atomic transaction. See [Init Command](init.md).
 - `render`: generate target-specific files from the effective harness model.
 - `render --check`: fail when generated targets would change, without writing anything.
 - `review`: review a diff against the harness model.
@@ -137,23 +137,20 @@ That would let agents access architecture resources, workflows, and checks throu
 
 ## User Flow
 
-A typical setup flow could be:
+A typical setup flow is:
 
 ```bash
 architect-companion init
 ```
 
-The tool asks:
+`init` resolves the profile, stack, project name, and target selections from
+flags (auto-detecting sensible defaults), pre-flights the working tree for
+conflicts, then scaffolds `.architect-companion/` and renders the enabled
+targets in one atomic step. A wizard layer that fills missing flags
+interactively will land in a follow-up commit; see [Init Command](init.md)
+for the full contract, flag surface, and failure modes.
 
-- Which architecture profile should be used?
-- Which technology stack is this repository using?
-- Which coding agents should be supported?
-- Should checks be advisory or enforcing?
-- Which CI platform should be configured?
-
-It then creates `.architect-companion/` and renders the selected targets.
-
-After that, the user keeps working with their preferred tools:
+After init, the user keeps working with their preferred tools:
 
 - Cursor reads Cursor rules or `AGENTS.md`.
 - Claude Code reads Claude-specific commands, settings, or instructions.
