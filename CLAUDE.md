@@ -122,8 +122,8 @@ Bad:
 const parsed = parseArgs(process.argv);
 // Business logic inside the CLI
 if (parsed.force && parsed.clean) {
-  rimraf.sync(parsed.outDir);
-  const built = build(parsed.src);
+   rimraf.sync(parsed.outDir);
+   const built = build(parsed.src);
 }
 ```
 
