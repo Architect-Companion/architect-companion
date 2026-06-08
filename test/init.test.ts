@@ -56,7 +56,7 @@ describe("architect-companion init", () => {
 
       expect(exitCode).toBe(0);
       expect(writes.stderr).toBe("");
-      expect(writes.stdout).toContain("Profile: modular-monolith@0.1.0");
+      expect(writes.stdout).toContain("Profile: modular-monolith@0.2.0");
       expect(writes.stdout).toContain("Stack: typescript");
       expect(writes.stdout).toContain("created .architect-companion/harness.yml");
       expect(writes.stdout).toContain("created .architect-companion/architecture/modules.yml");
