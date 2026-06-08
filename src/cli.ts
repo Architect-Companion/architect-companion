@@ -1,16 +1,21 @@
 #!/usr/bin/env node
 import { realpathSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { computeCapabilityWarnings } from "./diagnostics/capability-warnings.js";
 import { doctorReportHasIssues, formatDoctorReport, runDoctor } from "./diagnostics/doctor.js";
+import { InitError, runInit } from "./init/init.js";
 import {
+  discoverProfileNames,
   HarnessConfigError,
+  knownTargetKeys,
   loadEffectiveHarnessModel,
   serializeEffectiveHarnessModel,
+  supportedStacks,
 } from "./model/effective-model.js";
+import type { KnownTargetKey, SupportedStack } from "./model/effective-model.js";
 import {
   describeProfileLockStaleReason,
   PROFILE_LOCK_FILE_PATH,
@@ -24,6 +29,10 @@ export const HELP_TEXT = `Architect Companion
 
 Usage:
   architect-companion [options]
+  architect-companion init [--profile <name>] [--stack <name>] [--project-name <name>]
+                           [--target <key>]... [--no-target <key>]...
+                           [--no-render] [--dry-run]
+                           [--project <dir>] [--profiles <dir>]
   architect-companion inspect effective-model [--project <dir>] [--profiles <dir>]
   architect-companion render [--project <dir>] [--profiles <dir>] [--check]
   architect-companion doctor [--project <dir>] [--profiles <dir>]
@@ -34,6 +43,9 @@ Options:
   -v, --version       Show the Architect Companion version.
 
 Commands:
+  init
+      Bootstrap .architect-companion/ from a selected profile and render the
+      enabled targets. Refuses to run when .architect-companion/ already exists.
   inspect effective-model
       Validate the harness inputs and print the resolved effective model as JSON.
   render
@@ -97,6 +109,10 @@ export async function runCli(args: string[], io: CliIo, options: CliOptions): Pr
     return 0;
   }
 
+  if (firstArg === "init") {
+    return runInitCommand(args.slice(1), io, options);
+  }
+
   if (firstArg === "inspect") {
     return runInspectCommand(args.slice(1), io, options);
   }
@@ -157,6 +173,35 @@ if (isDirectRun(import.meta.url)) {
       process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
       process.exitCode = 1;
     });
+}
+
+async function runInitCommand(args: string[], io: CliIo, options: CliOptions): Promise<number> {
+  const parsedOptions = parseInitOptions(args, options);
+  if (!parsedOptions.success) {
+    io.stderr.write(`${parsedOptions.message}\n`);
+    io.stderr.write("Run `architect-companion --help` for usage.\n");
+    return 1;
+  }
+
+  const initInputs = await resolveInitInputs(parsedOptions.options, io);
+  if (initInputs === undefined) {
+    return 1;
+  }
+
+  try {
+    return await runInit(initInputs, io);
+  } catch (error: unknown) {
+    if (
+      error instanceof InitError ||
+      error instanceof HarnessConfigError ||
+      error instanceof RenderError ||
+      error instanceof ProfileLockError
+    ) {
+      io.stderr.write(`${error.message}\n`);
+      return 1;
+    }
+    throw error;
+  }
 }
 
 async function runInspectCommand(args: string[], io: CliIo, options: CliOptions): Promise<number> {
@@ -399,6 +444,221 @@ function parseDirectoryOptions(
     },
     success: true,
   };
+}
+
+type InitParsedOptions = ResolvedDirectoryOptions & {
+  disabledTargets: KnownTargetKey[];
+  dryRun: boolean;
+  enabledTargets: KnownTargetKey[];
+  noRender: boolean;
+  profile?: string;
+  projectName?: string;
+  stack?: SupportedStack;
+};
+
+function parseInitOptions(
+  args: string[],
+  options: CliOptions,
+): DirectoryOptionsResult<InitParsedOptions> {
+  const cwd = options.cwd ?? process.cwd();
+  let projectDir = cwd;
+  let profilesDir = options.profilesDir;
+  let profile: string | undefined;
+  let stack: SupportedStack | undefined;
+  let projectName: string | undefined;
+  let noRender = false;
+  let dryRun = false;
+  const enabledTargets: KnownTargetKey[] = [];
+  const disabledTargets: KnownTargetKey[] = [];
+
+  for (let index = 0; index < args.length; index += 1) {
+    const flag = args[index];
+    const value = args[index + 1];
+
+    if (flag === "--no-render") {
+      noRender = true;
+      continue;
+    }
+
+    if (flag === "--dry-run") {
+      dryRun = true;
+      continue;
+    }
+
+    if (flag === "--profile") {
+      const optionValue = parseDirectoryOptionValue("--profile", value);
+      if (!optionValue.success) {
+        return optionValue;
+      }
+      profile = optionValue.value;
+      index += 1;
+      continue;
+    }
+
+    if (flag === "--stack") {
+      const optionValue = parseDirectoryOptionValue("--stack", value);
+      if (!optionValue.success) {
+        return optionValue;
+      }
+      if (!(supportedStacks as readonly string[]).includes(optionValue.value)) {
+        return {
+          message: `--stack must be one of: ${supportedStacks.join(", ")}.`,
+          success: false,
+        };
+      }
+      stack = optionValue.value as SupportedStack;
+      index += 1;
+      continue;
+    }
+
+    if (flag === "--project-name") {
+      const optionValue = parseDirectoryOptionValue("--project-name", value);
+      if (!optionValue.success) {
+        return optionValue;
+      }
+      projectName = optionValue.value;
+      index += 1;
+      continue;
+    }
+
+    if (flag === "--target" || flag === "--no-target") {
+      const optionValue = parseDirectoryOptionValue(flag, value);
+      if (!optionValue.success) {
+        return optionValue;
+      }
+      if (!(knownTargetKeys as readonly string[]).includes(optionValue.value)) {
+        return {
+          message: `${flag} must be one of: ${knownTargetKeys.join(", ")}.`,
+          success: false,
+        };
+      }
+      const targetKey = optionValue.value as KnownTargetKey;
+      if (flag === "--target") {
+        enabledTargets.push(targetKey);
+      } else {
+        disabledTargets.push(targetKey);
+      }
+      index += 1;
+      continue;
+    }
+
+    if (flag === "--project") {
+      const optionValue = parseDirectoryOptionValue("--project", value);
+      if (!optionValue.success) {
+        return optionValue;
+      }
+      projectDir = resolve(cwd, optionValue.value);
+      index += 1;
+      continue;
+    }
+
+    if (flag === "--profiles") {
+      const optionValue = parseDirectoryOptionValue("--profiles", value);
+      if (!optionValue.success) {
+        return optionValue;
+      }
+      profilesDir = resolve(cwd, optionValue.value);
+      index += 1;
+      continue;
+    }
+
+    return {
+      message: `Unknown argument: ${flag ?? ""}`,
+      success: false,
+    };
+  }
+
+  const conflictingTargets = enabledTargets.filter((target) => disabledTargets.includes(target));
+  if (conflictingTargets.length > 0) {
+    return {
+      message: `target ${conflictingTargets[0]} cannot be both enabled (--target) and disabled (--no-target).`,
+      success: false,
+    };
+  }
+
+  const parsedOptions: InitParsedOptions = {
+    disabledTargets,
+    dryRun,
+    enabledTargets,
+    noRender,
+    profilesDir,
+    projectDir,
+  };
+  if (profile !== undefined) {
+    parsedOptions.profile = profile;
+  }
+  if (projectName !== undefined) {
+    parsedOptions.projectName = projectName;
+  }
+  if (stack !== undefined) {
+    parsedOptions.stack = stack;
+  }
+
+  return {
+    options: parsedOptions,
+    success: true,
+  };
+}
+
+async function resolveInitInputs(
+  parsed: InitParsedOptions,
+  io: CliIo,
+): Promise<Parameters<typeof runInit>[0] | undefined> {
+  let profileName = parsed.profile;
+  if (profileName === undefined) {
+    try {
+      const discovered = await discoverProfileNames(parsed.profilesDir);
+      if (discovered.length === 0) {
+        io.stderr.write(`No profiles installed in ${parsed.profilesDir}.\n`);
+        return undefined;
+      }
+      if (discovered.length > 1) {
+        io.stderr.write(
+          `Multiple profiles installed (${discovered.join(", ")}); pass --profile <name>.\n`,
+        );
+        return undefined;
+      }
+      const onlyProfile = discovered[0];
+      if (onlyProfile === undefined) {
+        io.stderr.write(`No profiles installed in ${parsed.profilesDir}.\n`);
+        return undefined;
+      }
+      profileName = onlyProfile;
+    } catch (error: unknown) {
+      if (error instanceof HarnessConfigError) {
+        io.stderr.write(`${error.message}\n`);
+        return undefined;
+      }
+      throw error;
+    }
+  }
+
+  const projectName = parsed.projectName ?? defaultProjectName(parsed.projectDir);
+
+  const initInputs: Parameters<typeof runInit>[0] = {
+    disabledTargets: parsed.disabledTargets,
+    dryRun: parsed.dryRun,
+    enabledTargets: parsed.enabledTargets,
+    noRender: parsed.noRender,
+    profileName,
+    profilesDir: parsed.profilesDir,
+    projectDir: parsed.projectDir,
+    projectName,
+  };
+  if (parsed.stack !== undefined) {
+    initInputs.stack = parsed.stack;
+  }
+  return initInputs;
+}
+
+function defaultProjectName(projectDir: string): string {
+  const base = basename(resolve(projectDir));
+  const sanitized = base
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/^[^a-z]+/, "");
+  return sanitized.length > 0 ? sanitized : "project";
 }
 
 function parseRenderOptions(

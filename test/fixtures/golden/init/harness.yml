@@ -1,0 +1,7 @@
+schemaVersion: 1
+profile:
+  name: modular-monolith
+  version: 0.1.0
+project:
+  name: widgets
+modules: architecture/modules.yml

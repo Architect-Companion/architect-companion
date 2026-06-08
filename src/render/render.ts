@@ -56,6 +56,25 @@ export class RenderError extends Error {
   }
 }
 
+export type RendererOutput = {
+  outputPath: string;
+  target: KnownTargetKey;
+};
+
+export function getRendererOutputs(
+  targets: Partial<Record<KnownTargetKey, boolean>>,
+): RendererOutput[] {
+  return knownTargetKeys.flatMap((target) => {
+    if (targets[target] !== true) {
+      return [];
+    }
+    return getTargetMetadata(target).outputs.map((output) => ({
+      outputPath: output.outputPath,
+      target,
+    }));
+  });
+}
+
 export async function renderEffectiveHarnessModel(options: RenderOptions): Promise<RenderResult[]> {
   const projectDir = path.resolve(options.projectDir);
   const selectedOutputs = getSelectedTargetOutputs(options.model);
@@ -121,17 +140,6 @@ export async function renderEffectiveHarnessModel(options: RenderOptions): Promi
 
 function getSelectedTargetOutputs(model: EffectiveHarnessModel): RenderedTargetOutput[] {
   const renderersByTarget = new Map(targetRenderers.map((renderer) => [renderer.target, renderer]));
-  const unsupportedTargets = knownTargetKeys.filter(
-    (target) => model.targets[target] && !renderersByTarget.has(target),
-  );
-
-  if (unsupportedTargets.length > 0) {
-    throw new RenderError(
-      `Selected target${unsupportedTargets.length === 1 ? "" : "s"} ${unsupportedTargets.join(
-        ", ",
-      )} ${unsupportedTargets.length === 1 ? "does" : "do"} not have a renderer yet. Disable the target in harness.yml or upgrade Architect Companion to a version that ships it.`,
-    );
-  }
 
   return knownTargetKeys.flatMap((target) => {
     if (!model.targets[target]) {

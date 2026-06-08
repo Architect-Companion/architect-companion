@@ -1,4 +1,5 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
+
 import path, { posix } from "node:path";
 import { parseDocument } from "yaml";
 
@@ -6,16 +7,29 @@ import { knownTargetKeys, type KnownTargetKey } from "../targets/target-registry
 
 export { knownTargetKeys, type KnownTargetKey } from "../targets/target-registry.js";
 
-const supportedStacks = ["typescript"] as const;
+export const supportedStacks = ["typescript"] as const;
 const supportedPolicySeverities = ["advisory", "warning", "error"] as const;
 const supportedPolicyEngines = ["dependency-cruiser"] as const;
 const supportedPolicyRenderers = ["dependency-cruiser-config"] as const;
 
-type SupportedStack = (typeof supportedStacks)[number];
+export type SupportedStack = (typeof supportedStacks)[number];
 type PolicySeverity = (typeof supportedPolicySeverities)[number];
 type PolicyEngine = (typeof supportedPolicyEngines)[number];
 type PolicyRenderer = (typeof supportedPolicyRenderers)[number];
 type TargetSelection = Partial<Record<KnownTargetKey, boolean>>;
+
+export type ProfileMetadata = {
+  defaults: {
+    stack?: SupportedStack;
+    targets: Partial<Record<KnownTargetKey, boolean>>;
+  };
+  profile: {
+    name: string;
+    summary?: string;
+    title?: string;
+    version: string;
+  };
+};
 
 export type EffectiveHarnessModel = {
   allowedDependencies: Record<string, string[]>;
@@ -198,6 +212,64 @@ export async function loadEffectiveHarnessModel(
 
 export function serializeEffectiveHarnessModel(model: EffectiveHarnessModel): string {
   return `${JSON.stringify(sortObjectKeys(model), null, 2)}\n`;
+}
+
+export async function loadProfileMetadata(
+  profilesDir: string,
+  profileName: string,
+): Promise<ProfileMetadata> {
+  const resolvedProfilesDir = path.resolve(profilesDir);
+  const profilePath = path.join(resolvedProfilesDir, profileName, "profile.yml");
+  const profileDisplayPath = displayPath(profilePath, path.dirname(resolvedProfilesDir));
+
+  const config = parseProfileConfig(await readYamlFile(profilePath, profileDisplayPath), {
+    filePath: profileDisplayPath,
+  });
+
+  if (config.profile.name !== profileName) {
+    throw new HarnessConfigError(
+      `${profileDisplayPath}: profile.name "${config.profile.name}" does not match directory "${profileName}".`,
+    );
+  }
+
+  return {
+    defaults: config.defaults,
+    profile: config.profile,
+  };
+}
+
+export async function discoverProfileNames(profilesDir: string): Promise<string[]> {
+  const resolvedProfilesDir = path.resolve(profilesDir);
+
+  let entries: string[];
+  try {
+    entries = await readdir(resolvedProfilesDir);
+  } catch (error: unknown) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      throw new HarnessConfigError(`profiles directory not found: ${resolvedProfilesDir}`);
+    }
+
+    throw error;
+  }
+
+  const names: string[] = [];
+  for (const entry of entries) {
+    const profileYmlPath = path.join(resolvedProfilesDir, entry, "profile.yml");
+    try {
+      const stats = await stat(profileYmlPath);
+      if (stats.isFile()) {
+        names.push(entry);
+      }
+    } catch (error: unknown) {
+      if (isNodeError(error) && error.code === "ENOENT") {
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  return names.sort();
 }
 
 async function readYamlFile(filePath: string, displayFilePath: string): Promise<unknown> {
