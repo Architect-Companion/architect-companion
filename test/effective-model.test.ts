@@ -94,6 +94,7 @@ describe("loadEffectiveHarnessModel", () => {
   "stack": "typescript",
   "targets": {
     "agentsMd": true,
+    "claudeMd": false,
     "cursor": false,
     "dependencyCruiser": false,
     "githubActions": false

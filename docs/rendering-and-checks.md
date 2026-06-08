@@ -115,7 +115,7 @@ architect-companion render --check
 
 That command should fail when generated files are stale.
 
-Renderers support full-file generation for `AGENTS.md`, Cursor rules, the dependency-cruiser config, and the GitHub Actions workflow.
+Renderers support full-file generation for `AGENTS.md`, `CLAUDE.md`, Cursor rules, the dependency-cruiser config, and the GitHub Actions workflow.
 
 ## CI Rendering
 
@@ -293,6 +293,7 @@ allowed_dependencies:
 `architect-companion render` can generate:
 
 - `AGENTS.md` guidance for AI agents
+- `CLAUDE.md` guidance for Claude
 - `.cursor/rules/*.mdc` for Cursor
 - `.dependency-cruiser.cjs` for dependency-cruiser
 - `.github/workflows/architecture.yml` for GitHub Actions

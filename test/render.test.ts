@@ -76,6 +76,35 @@ describe("renderEffectiveHarnessModel", () => {
     }
   });
 
+  it("renders CLAUDE.md from the effective model", async () => {
+    const projectDir = copySampleProject();
+    writeHarness(
+      projectDir,
+      `targets:
+  agentsMd: false
+  claudeMd: true
+`,
+    );
+
+    try {
+      const model = await loadEffectiveHarnessModel({ profilesDir, projectDir });
+      const results = await renderEffectiveHarnessModel({ model, projectDir });
+
+      expect(results).toEqual([
+        {
+          outputPath: "CLAUDE.md",
+          status: "created",
+          target: "claudeMd",
+        },
+      ]);
+      expect(readFileSync(join(projectDir, "CLAUDE.md"), "utf8")).toBe(
+        readFileSync(join(goldenDir, "CLAUDE.md"), "utf8"),
+      );
+    } finally {
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+
   it("is deterministic across repeated renders", async () => {
     const projectDir = copySampleProject();
 

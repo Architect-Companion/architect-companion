@@ -100,9 +100,9 @@ profile:
 
 targets:
   agentsMd: true
-  claudeCode: true
+  claudeMd: true
   cursor: true
-  copilot: true
+  dependencyCruiser: true
   githubActions: true
 ```
 

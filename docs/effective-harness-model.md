@@ -17,6 +17,7 @@ defaults:
   stack: typescript
   targets:
     agentsMd: true
+    claudeMd: false
 principles:
   - id: module-ownership
     title: Modules own behavior behind public APIs
@@ -60,6 +61,7 @@ project:
   name: example-app
 modules: architecture/modules.yml
 targets:
+  claudeMd: false
   cursor: false
 ```
 

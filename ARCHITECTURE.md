@@ -19,7 +19,7 @@ profiles/<name>/profile.yml            reusable architectural knowledge
             v
   effective harness model              resolved, validated contract
             |
-            +--> deterministic renderers           AGENTS.md, Cursor rules, ...
+            +--> deterministic renderers           AGENTS.md, CLAUDE.md, Cursor rules, ...
             +--> external tool config renderers    .dependency-cruiser.cjs
             +--> CI platform renderers             .github/workflows/architecture.yml
             +--> architecture check commands       consumed by CI renderers
@@ -116,11 +116,12 @@ an ADR.
 
 Adding a renderer (target-specific projection):
 
-1. Add a `Renderer` entry under `src/renderers/` (or `src/render/render.ts` for
-   the simplest cases) with an `outputPath`, a `render(model)` function, and a
-   `target` key in `knownTargetKeys`.
-2. Ensure the rendered content includes the generated-file marker.
-3. Add a golden-file test under `test/`.
+1. Add target metadata to `src/targets/target-registry.ts`, including the
+   target key and generated output path.
+2. Add renderer code under `src/renderers/` (or `src/render/render.ts` for the
+   simplest cases) and bind it from the render layer.
+3. Ensure the rendered content includes the generated-file marker.
+4. Add a golden-file test under `test/`.
 
 Adding an external-engine integration:
 
@@ -134,7 +135,7 @@ Adding an external-engine integration:
 
 Adding a target key:
 
-1. Append the key to `knownTargetKeys` in `src/model/effective-model.ts`.
+1. Add the key to `src/targets/target-registry.ts`.
 2. Either provide a renderer or accept that the target is declared but not yet
    renderable; the render path will report unsupported selections.
 
