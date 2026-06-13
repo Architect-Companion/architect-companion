@@ -16,9 +16,8 @@ import {
   loadEffectiveHarnessModel,
   loadProfileMetadata,
   serializeEffectiveHarnessModel,
-  supportedStacks,
 } from "./model/effective-model.js";
-import type { KnownTargetKey, SupportedStack } from "./model/effective-model.js";
+import type { KnownTargetKey } from "./model/effective-model.js";
 import {
   describeProfileLockStaleReason,
   PROFILE_LOCK_FILE_PATH,
@@ -32,7 +31,8 @@ export const HELP_TEXT = `Architect Companion
 
 Usage:
   architect-companion [options]
-  architect-companion init [--profile <name>] [--stack <name>] [--project-name <name>]
+  architect-companion init [--profile <name>]... [--language <name>]...
+                           [--project-name <name>]
                            [--target <key>]... [--no-target <key>]...
                            [--no-render] [--dry-run]
                            [--project <dir>] [--profiles <dir>]
@@ -47,7 +47,7 @@ Options:
 
 Commands:
   init
-      Bootstrap .architect-companion/ from a selected profile and render the
+      Bootstrap .architect-companion/ from selected profiles and render the
       enabled targets. Refuses to run when .architect-companion/ already exists.
       Runs an interactive wizard when stdin is a TTY and any input is missing
       from flags; otherwise uses sensible defaults or fails fast on missing
@@ -59,7 +59,7 @@ Commands:
   doctor
       Diagnose adoption issues: missing tools, capability warnings, and profile lock status.
   upgrade-profile
-      Update .architect-companion/profile.lock.yml to match the currently resolved profile.
+      Update .architect-companion/profile.lock.yml to match the currently resolved profiles.
 `;
 
 type Writable = {
@@ -228,10 +228,12 @@ function shouldRunWizard(parsed: InitParsedOptions): boolean {
     return false;
   }
   const targetsExplicit = parsed.enabledTargets.length > 0 || parsed.disabledTargets.length > 0;
-  // Stack is intentionally not in this list — the profile's `defaults.stack` is a
-  // valid silent default in both interactive and non-interactive mode. The wizard
-  // only fires when an input has no usable default at the CLI level.
-  return parsed.profile === undefined || parsed.projectName === undefined || !targetsExplicit;
+  return (
+    parsed.profileNames.length === 0 ||
+    parsed.languages.length === 0 ||
+    parsed.projectName === undefined ||
+    !targetsExplicit
+  );
 }
 
 async function runInspectCommand(args: string[], io: CliIo, options: CliOptions): Promise<number> {
@@ -403,17 +405,17 @@ async function runUpgradeProfileCommand(
     switch (lockStatus.kind) {
       case "missing":
         io.stdout.write(
-          `created ${PROFILE_LOCK_FILE_PATH} for ${lockStatus.expected.profile.name}@${lockStatus.expected.profile.version}\n`,
+          `created ${PROFILE_LOCK_FILE_PATH} for ${formatLockedProfiles(lockStatus.expected.profiles)}\n`,
         );
         return 0;
       case "match":
         io.stdout.write(
-          `${PROFILE_LOCK_FILE_PATH} already pinned ${lockStatus.expected.profile.name}@${lockStatus.expected.profile.version}; rewrote the lock file.\n`,
+          `${PROFILE_LOCK_FILE_PATH} already pinned ${formatLockedProfiles(lockStatus.expected.profiles)}; rewrote the lock file.\n`,
         );
         return 0;
       case "stale":
         io.stdout.write(
-          `upgraded ${PROFILE_LOCK_FILE_PATH} from ${lockStatus.lock.profile.name}@${lockStatus.lock.profile.version} to ${lockStatus.expected.profile.name}@${lockStatus.expected.profile.version}\n`,
+          `upgraded ${PROFILE_LOCK_FILE_PATH} from ${formatLockedProfiles(lockStatus.lock.profiles)} to ${formatLockedProfiles(lockStatus.expected.profiles)}\n`,
         );
         return 0;
     }
@@ -425,6 +427,12 @@ async function runUpgradeProfileCommand(
 
     throw error;
   }
+}
+
+function formatLockedProfiles(
+  profiles: Awaited<ReturnType<typeof resolveProfileLockStatus>>["expected"]["profiles"],
+): string {
+  return profiles.map((profile) => `${profile.name}@${profile.version}`).join(", ");
 }
 
 function parseDirectoryOptions(
@@ -480,10 +488,10 @@ type InitParsedOptions = ResolvedDirectoryOptions & {
   disabledTargets: KnownTargetKey[];
   dryRun: boolean;
   enabledTargets: KnownTargetKey[];
+  languages: string[];
   noRender: boolean;
-  profile?: string;
+  profileNames: string[];
   projectName?: string;
-  stack?: SupportedStack;
 };
 
 const IDENTIFIER_PATTERN = /^[a-z][a-z0-9-]*$/;
@@ -496,8 +504,8 @@ function parseInitOptions(
   const cwd = options.cwd ?? process.cwd();
   let projectDir = cwd;
   let profilesDir = options.profilesDir;
-  let profile: string | undefined;
-  let stack: SupportedStack | undefined;
+  const profileNames: string[] = [];
+  const languages: string[] = [];
   let projectName: string | undefined;
   let noRender = false;
   let dryRun = false;
@@ -529,23 +537,23 @@ function parseInitOptions(
           success: false,
         };
       }
-      profile = optionValue.value;
+      profileNames.push(optionValue.value);
       index += 1;
       continue;
     }
 
-    if (flag === "--stack") {
-      const optionValue = parseFlagValue("--stack", value, "value");
+    if (flag === "--language") {
+      const optionValue = parseFlagValue("--language", value, "value");
       if (!optionValue.success) {
         return optionValue;
       }
-      if (!(supportedStacks as readonly string[]).includes(optionValue.value)) {
+      if (!IDENTIFIER_PATTERN.test(optionValue.value)) {
         return {
-          message: `--stack must be one of: ${supportedStacks.join(", ")}.`,
+          message: `--language ${IDENTIFIER_ERROR}.`,
           success: false,
         };
       }
-      stack = optionValue.value as SupportedStack;
+      languages.push(optionValue.value);
       index += 1;
       continue;
     }
@@ -621,22 +629,34 @@ function parseInitOptions(
     };
   }
 
+  const duplicateProfile = findDuplicate(profileNames);
+  if (duplicateProfile !== undefined) {
+    return {
+      message: `--profile ${duplicateProfile} was provided more than once.`,
+      success: false,
+    };
+  }
+
+  const duplicateLanguage = findDuplicate(languages);
+  if (duplicateLanguage !== undefined) {
+    return {
+      message: `--language ${duplicateLanguage} was provided more than once.`,
+      success: false,
+    };
+  }
+
   const parsedOptions: InitParsedOptions = {
     disabledTargets,
     dryRun,
     enabledTargets,
+    languages,
     noRender,
+    profileNames,
     profilesDir,
     projectDir,
   };
-  if (profile !== undefined) {
-    parsedOptions.profile = profile;
-  }
   if (projectName !== undefined) {
     parsedOptions.projectName = projectName;
-  }
-  if (stack !== undefined) {
-    parsedOptions.stack = stack;
   }
 
   return {
@@ -660,8 +680,8 @@ async function resolveInitInputsNonInteractive(
   parsed: InitParsedOptions,
   io: CliIo,
 ): Promise<Parameters<typeof runInit>[0] | undefined> {
-  let profileName = parsed.profile;
-  if (profileName === undefined) {
+  let profileNames = parsed.profileNames;
+  if (profileNames.length === 0) {
     try {
       const discovered = await discoverProfileNames(parsed.profilesDir);
       if (discovered.length === 0) {
@@ -670,7 +690,7 @@ async function resolveInitInputsNonInteractive(
       }
       if (discovered.length > 1) {
         io.stderr.write(
-          `Multiple profiles installed (${discovered.join(", ")}); pass --profile <name>.\n`,
+          `Multiple profiles installed (${discovered.join(", ")}); pass --profile <name> for each selected profile.\n`,
         );
         return undefined;
       }
@@ -679,7 +699,7 @@ async function resolveInitInputsNonInteractive(
         io.stderr.write(`No profiles installed in ${parsed.profilesDir}.\n`);
         return undefined;
       }
-      profileName = onlyProfile;
+      profileNames = [onlyProfile];
     } catch (error: unknown) {
       if (error instanceof HarnessConfigError) {
         io.stderr.write(`${error.message}\n`);
@@ -689,21 +709,24 @@ async function resolveInitInputsNonInteractive(
     }
   }
 
+  if (parsed.languages.length === 0) {
+    io.stderr.write("At least one --language <name> is required.\n");
+    return undefined;
+  }
+
   const projectName = parsed.projectName ?? defaultProjectName(parsed.projectDir);
 
   const initInputs: Parameters<typeof runInit>[0] = {
     disabledTargets: parsed.disabledTargets,
     dryRun: parsed.dryRun,
     enabledTargets: parsed.enabledTargets,
+    languages: parsed.languages,
     noRender: parsed.noRender,
-    profileName,
+    profileNames,
     profilesDir: parsed.profilesDir,
     projectDir: parsed.projectDir,
     projectName,
   };
-  if (parsed.stack !== undefined) {
-    initInputs.stack = parsed.stack;
-  }
   return initInputs;
 }
 
@@ -737,14 +760,14 @@ async function resolveInitInputsInteractive(
     },
     presetTargetsExplicit: parsed.enabledTargets.length > 0 || parsed.disabledTargets.length > 0,
   };
-  if (parsed.profile !== undefined) {
-    wizardOptions.presetProfileName = parsed.profile;
+  if (parsed.profileNames.length > 0) {
+    wizardOptions.presetProfileNames = parsed.profileNames;
   }
   if (parsed.projectName !== undefined) {
     wizardOptions.presetProjectName = parsed.projectName;
   }
-  if (parsed.stack !== undefined) {
-    wizardOptions.presetStack = parsed.stack;
+  if (parsed.languages.length > 0) {
+    wizardOptions.presetLanguages = parsed.languages;
   }
 
   let result;
@@ -768,16 +791,25 @@ async function resolveInitInputsInteractive(
     dryRun: parsed.dryRun,
     enabledTargets:
       parsed.enabledTargets.length > 0 ? parsed.enabledTargets : result.enabledTargets,
+    languages: result.languages,
     noRender: parsed.noRender,
-    profileName: result.profileName,
+    profileNames: result.profileNames,
     profilesDir: parsed.profilesDir,
     projectDir: parsed.projectDir,
     projectName: result.projectName,
   };
-  if (result.stack !== undefined) {
-    initInputs.stack = result.stack;
-  }
   return initInputs;
+}
+
+function findDuplicate(values: string[]): string | undefined {
+  const seen = new Set<string>();
+  for (const value of values) {
+    if (seen.has(value)) {
+      return value;
+    }
+    seen.add(value);
+  }
+  return undefined;
 }
 
 function defaultProjectName(projectDir: string): string {

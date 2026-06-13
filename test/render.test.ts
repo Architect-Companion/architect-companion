@@ -244,7 +244,7 @@ stale
       const contents = readFileSync(join(projectDir, ".dependency-cruiser.cjs"), "utf8");
       expect(contents).toContain(GENERATED_FILE_MARKER);
       expect(contents).toContain(
-        "architect-companion/module-boundaries/billing-to-identity/internal-import",
+        "architect-companion/modular-monolith.module-boundaries/billing-to-identity/internal-import",
       );
     } finally {
       rmSync(projectDir, { force: true, recursive: true });
@@ -292,12 +292,16 @@ function writeHarness(projectDir: string, targets: string): void {
   writeFileSync(
     join(projectDir, ".architect-companion", "harness.yml"),
     `schemaVersion: 1
-profile:
-  name: modular-monolith
-  version: 0.2.0
+profiles:
+  - name: modular-monolith
+    version: 0.2.0
+  - name: typescript
+    version: 0.1.0
 project:
   name: sample-project
-modules: architecture/modules.yml
+  languages:
+    - typescript
+boundaries: architecture/boundaries.yml
 ${targets}`,
   );
 }

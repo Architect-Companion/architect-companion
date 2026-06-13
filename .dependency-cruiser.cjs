@@ -3,33 +3,33 @@
 module.exports = {
   "forbidden": [
     {
-      "comment": "checks does not declare cli as an allowed module dependency.",
+      "comment": "checks does not declare cli as an allowed boundary dependency.",
       "from": {
         "path": "^src/checks(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/checks-to-cli/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/checks-to-cli/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/cli\\.ts(?:/|$)"
       }
     },
     {
-      "comment": "checks does not declare diagnostics as an allowed module dependency.",
+      "comment": "checks does not declare diagnostics as an allowed boundary dependency.",
       "from": {
         "path": "^src/checks(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/checks-to-diagnostics/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/checks-to-diagnostics/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/diagnostics(?:/|$)"
       }
     },
     {
-      "comment": "checks does not declare init as an allowed module dependency.",
+      "comment": "checks does not declare init as an allowed boundary dependency.",
       "from": {
         "path": "^src/checks(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/checks-to-init/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/checks-to-init/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/init(?:/|$)"
@@ -40,18 +40,18 @@ module.exports = {
       "from": {
         "path": "^src/checks(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/checks-to-integrations/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/checks-to-integrations/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
       }
     },
     {
-      "comment": "checks does not declare io as an allowed module dependency.",
+      "comment": "checks does not declare io as an allowed boundary dependency.",
       "from": {
         "path": "^src/checks(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/checks-to-io/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/checks-to-io/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/io(?:/|$)"
@@ -62,40 +62,40 @@ module.exports = {
       "from": {
         "path": "^src/checks(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/checks-to-model/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/checks-to-model/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
       }
     },
     {
-      "comment": "checks does not declare render as an allowed module dependency.",
+      "comment": "checks does not declare render as an allowed boundary dependency.",
       "from": {
         "path": "^src/checks(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/checks-to-render/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/checks-to-render/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/render(?:/|$)"
       }
     },
     {
-      "comment": "checks does not declare renderers as an allowed module dependency.",
+      "comment": "checks does not declare renderers as an allowed boundary dependency.",
       "from": {
         "path": "^src/checks(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/checks-to-renderers/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/checks-to-renderers/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/renderers(?:/|$)"
       }
     },
     {
-      "comment": "checks does not declare targets as an allowed module dependency.",
+      "comment": "checks does not declare targets as an allowed boundary dependency.",
       "from": {
         "path": "^src/checks(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/checks-to-targets/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/checks-to-targets/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/targets(?:/|$)"
@@ -106,7 +106,7 @@ module.exports = {
       "from": {
         "path": "^src/cli\\.ts(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/cli-to-checks/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/cli-to-checks/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
@@ -117,7 +117,7 @@ module.exports = {
       "from": {
         "path": "^src/cli\\.ts(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/cli-to-diagnostics/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/cli-to-diagnostics/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
@@ -128,7 +128,7 @@ module.exports = {
       "from": {
         "path": "^src/cli\\.ts(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/cli-to-init/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/cli-to-init/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
@@ -139,7 +139,7 @@ module.exports = {
       "from": {
         "path": "^src/cli\\.ts(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/cli-to-integrations/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/cli-to-integrations/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
@@ -150,7 +150,7 @@ module.exports = {
       "from": {
         "path": "^src/cli\\.ts(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/cli-to-io/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/cli-to-io/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
@@ -161,7 +161,7 @@ module.exports = {
       "from": {
         "path": "^src/cli\\.ts(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/cli-to-model/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/cli-to-model/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
@@ -172,29 +172,29 @@ module.exports = {
       "from": {
         "path": "^src/cli\\.ts(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/cli-to-render/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/cli-to-render/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
       }
     },
     {
-      "comment": "cli does not declare renderers as an allowed module dependency.",
+      "comment": "cli does not declare renderers as an allowed boundary dependency.",
       "from": {
         "path": "^src/cli\\.ts(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/cli-to-renderers/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/cli-to-renderers/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/renderers(?:/|$)"
       }
     },
     {
-      "comment": "cli does not declare targets as an allowed module dependency.",
+      "comment": "cli does not declare targets as an allowed boundary dependency.",
       "from": {
         "path": "^src/cli\\.ts(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/cli-to-targets/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/cli-to-targets/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/targets(?:/|$)"
@@ -205,29 +205,29 @@ module.exports = {
       "from": {
         "path": "^src/diagnostics(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/diagnostics-to-checks/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/diagnostics-to-checks/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
       }
     },
     {
-      "comment": "diagnostics does not declare cli as an allowed module dependency.",
+      "comment": "diagnostics does not declare cli as an allowed boundary dependency.",
       "from": {
         "path": "^src/diagnostics(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/diagnostics-to-cli/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/diagnostics-to-cli/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/cli\\.ts(?:/|$)"
       }
     },
     {
-      "comment": "diagnostics does not declare init as an allowed module dependency.",
+      "comment": "diagnostics does not declare init as an allowed boundary dependency.",
       "from": {
         "path": "^src/diagnostics(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/diagnostics-to-init/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/diagnostics-to-init/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/init(?:/|$)"
@@ -238,18 +238,18 @@ module.exports = {
       "from": {
         "path": "^src/diagnostics(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/diagnostics-to-integrations/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/diagnostics-to-integrations/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
       }
     },
     {
-      "comment": "diagnostics does not declare io as an allowed module dependency.",
+      "comment": "diagnostics does not declare io as an allowed boundary dependency.",
       "from": {
         "path": "^src/diagnostics(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/diagnostics-to-io/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/diagnostics-to-io/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/io(?:/|$)"
@@ -260,84 +260,84 @@ module.exports = {
       "from": {
         "path": "^src/diagnostics(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/diagnostics-to-model/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/diagnostics-to-model/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
       }
     },
     {
-      "comment": "diagnostics does not declare render as an allowed module dependency.",
+      "comment": "diagnostics does not declare render as an allowed boundary dependency.",
       "from": {
         "path": "^src/diagnostics(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/diagnostics-to-render/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/diagnostics-to-render/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/render(?:/|$)"
       }
     },
     {
-      "comment": "diagnostics does not declare renderers as an allowed module dependency.",
+      "comment": "diagnostics does not declare renderers as an allowed boundary dependency.",
       "from": {
         "path": "^src/diagnostics(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/diagnostics-to-renderers/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/diagnostics-to-renderers/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/renderers(?:/|$)"
       }
     },
     {
-      "comment": "diagnostics does not declare targets as an allowed module dependency.",
+      "comment": "diagnostics does not declare targets as an allowed boundary dependency.",
       "from": {
         "path": "^src/diagnostics(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/diagnostics-to-targets/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/diagnostics-to-targets/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/targets(?:/|$)"
       }
     },
     {
-      "comment": "init does not declare checks as an allowed module dependency.",
+      "comment": "init does not declare checks as an allowed boundary dependency.",
       "from": {
         "path": "^src/init(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/init-to-checks/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/init-to-checks/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/checks(?:/|$)"
       }
     },
     {
-      "comment": "init does not declare cli as an allowed module dependency.",
+      "comment": "init does not declare cli as an allowed boundary dependency.",
       "from": {
         "path": "^src/init(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/init-to-cli/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/init-to-cli/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/cli\\.ts(?:/|$)"
       }
     },
     {
-      "comment": "init does not declare diagnostics as an allowed module dependency.",
+      "comment": "init does not declare diagnostics as an allowed boundary dependency.",
       "from": {
         "path": "^src/init(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/init-to-diagnostics/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/init-to-diagnostics/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/diagnostics(?:/|$)"
       }
     },
     {
-      "comment": "init does not declare integrations as an allowed module dependency.",
+      "comment": "init does not declare integrations as an allowed boundary dependency.",
       "from": {
         "path": "^src/init(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/init-to-integrations/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/init-to-integrations/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/integrations(?:/|$)"
@@ -348,7 +348,7 @@ module.exports = {
       "from": {
         "path": "^src/init(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/init-to-io/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/init-to-io/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
@@ -359,7 +359,7 @@ module.exports = {
       "from": {
         "path": "^src/init(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/init-to-model/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/init-to-model/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
@@ -370,84 +370,84 @@ module.exports = {
       "from": {
         "path": "^src/init(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/init-to-render/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/init-to-render/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
       }
     },
     {
-      "comment": "init does not declare renderers as an allowed module dependency.",
+      "comment": "init does not declare renderers as an allowed boundary dependency.",
       "from": {
         "path": "^src/init(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/init-to-renderers/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/init-to-renderers/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/renderers(?:/|$)"
       }
     },
     {
-      "comment": "init does not declare targets as an allowed module dependency.",
+      "comment": "init does not declare targets as an allowed boundary dependency.",
       "from": {
         "path": "^src/init(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/init-to-targets/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/init-to-targets/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/targets(?:/|$)"
       }
     },
     {
-      "comment": "integrations does not declare checks as an allowed module dependency.",
+      "comment": "integrations does not declare checks as an allowed boundary dependency.",
       "from": {
         "path": "^src/integrations(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/integrations-to-checks/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/integrations-to-checks/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/checks(?:/|$)"
       }
     },
     {
-      "comment": "integrations does not declare cli as an allowed module dependency.",
+      "comment": "integrations does not declare cli as an allowed boundary dependency.",
       "from": {
         "path": "^src/integrations(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/integrations-to-cli/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/integrations-to-cli/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/cli\\.ts(?:/|$)"
       }
     },
     {
-      "comment": "integrations does not declare diagnostics as an allowed module dependency.",
+      "comment": "integrations does not declare diagnostics as an allowed boundary dependency.",
       "from": {
         "path": "^src/integrations(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/integrations-to-diagnostics/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/integrations-to-diagnostics/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/diagnostics(?:/|$)"
       }
     },
     {
-      "comment": "integrations does not declare init as an allowed module dependency.",
+      "comment": "integrations does not declare init as an allowed boundary dependency.",
       "from": {
         "path": "^src/integrations(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/integrations-to-init/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/integrations-to-init/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/init(?:/|$)"
       }
     },
     {
-      "comment": "integrations does not declare io as an allowed module dependency.",
+      "comment": "integrations does not declare io as an allowed boundary dependency.",
       "from": {
         "path": "^src/integrations(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/integrations-to-io/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/integrations-to-io/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/io(?:/|$)"
@@ -458,194 +458,194 @@ module.exports = {
       "from": {
         "path": "^src/integrations(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/integrations-to-model/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/integrations-to-model/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
       }
     },
     {
-      "comment": "integrations does not declare render as an allowed module dependency.",
+      "comment": "integrations does not declare render as an allowed boundary dependency.",
       "from": {
         "path": "^src/integrations(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/integrations-to-render/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/integrations-to-render/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/render(?:/|$)"
       }
     },
     {
-      "comment": "integrations does not declare renderers as an allowed module dependency.",
+      "comment": "integrations does not declare renderers as an allowed boundary dependency.",
       "from": {
         "path": "^src/integrations(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/integrations-to-renderers/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/integrations-to-renderers/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/renderers(?:/|$)"
       }
     },
     {
-      "comment": "integrations does not declare targets as an allowed module dependency.",
+      "comment": "integrations does not declare targets as an allowed boundary dependency.",
       "from": {
         "path": "^src/integrations(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/integrations-to-targets/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/integrations-to-targets/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/targets(?:/|$)"
       }
     },
     {
-      "comment": "io does not declare checks as an allowed module dependency.",
+      "comment": "io does not declare checks as an allowed boundary dependency.",
       "from": {
         "path": "^src/io(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/io-to-checks/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/io-to-checks/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/checks(?:/|$)"
       }
     },
     {
-      "comment": "io does not declare cli as an allowed module dependency.",
+      "comment": "io does not declare cli as an allowed boundary dependency.",
       "from": {
         "path": "^src/io(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/io-to-cli/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/io-to-cli/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/cli\\.ts(?:/|$)"
       }
     },
     {
-      "comment": "io does not declare diagnostics as an allowed module dependency.",
+      "comment": "io does not declare diagnostics as an allowed boundary dependency.",
       "from": {
         "path": "^src/io(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/io-to-diagnostics/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/io-to-diagnostics/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/diagnostics(?:/|$)"
       }
     },
     {
-      "comment": "io does not declare init as an allowed module dependency.",
+      "comment": "io does not declare init as an allowed boundary dependency.",
       "from": {
         "path": "^src/io(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/io-to-init/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/io-to-init/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/init(?:/|$)"
       }
     },
     {
-      "comment": "io does not declare integrations as an allowed module dependency.",
+      "comment": "io does not declare integrations as an allowed boundary dependency.",
       "from": {
         "path": "^src/io(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/io-to-integrations/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/io-to-integrations/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/integrations(?:/|$)"
       }
     },
     {
-      "comment": "io does not declare model as an allowed module dependency.",
+      "comment": "io does not declare model as an allowed boundary dependency.",
       "from": {
         "path": "^src/io(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/io-to-model/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/io-to-model/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/model(?:/|$)"
       }
     },
     {
-      "comment": "io does not declare render as an allowed module dependency.",
+      "comment": "io does not declare render as an allowed boundary dependency.",
       "from": {
         "path": "^src/io(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/io-to-render/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/io-to-render/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/render(?:/|$)"
       }
     },
     {
-      "comment": "io does not declare renderers as an allowed module dependency.",
+      "comment": "io does not declare renderers as an allowed boundary dependency.",
       "from": {
         "path": "^src/io(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/io-to-renderers/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/io-to-renderers/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/renderers(?:/|$)"
       }
     },
     {
-      "comment": "io does not declare targets as an allowed module dependency.",
+      "comment": "io does not declare targets as an allowed boundary dependency.",
       "from": {
         "path": "^src/io(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/io-to-targets/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/io-to-targets/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/targets(?:/|$)"
       }
     },
     {
-      "comment": "model does not declare checks as an allowed module dependency.",
+      "comment": "model does not declare checks as an allowed boundary dependency.",
       "from": {
         "path": "^src/model(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/model-to-checks/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/model-to-checks/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/checks(?:/|$)"
       }
     },
     {
-      "comment": "model does not declare cli as an allowed module dependency.",
+      "comment": "model does not declare cli as an allowed boundary dependency.",
       "from": {
         "path": "^src/model(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/model-to-cli/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/model-to-cli/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/cli\\.ts(?:/|$)"
       }
     },
     {
-      "comment": "model does not declare diagnostics as an allowed module dependency.",
+      "comment": "model does not declare diagnostics as an allowed boundary dependency.",
       "from": {
         "path": "^src/model(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/model-to-diagnostics/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/model-to-diagnostics/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/diagnostics(?:/|$)"
       }
     },
     {
-      "comment": "model does not declare init as an allowed module dependency.",
+      "comment": "model does not declare init as an allowed boundary dependency.",
       "from": {
         "path": "^src/model(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/model-to-init/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/model-to-init/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/init(?:/|$)"
       }
     },
     {
-      "comment": "model does not declare integrations as an allowed module dependency.",
+      "comment": "model does not declare integrations as an allowed boundary dependency.",
       "from": {
         "path": "^src/model(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/model-to-integrations/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/model-to-integrations/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/integrations(?:/|$)"
@@ -656,29 +656,29 @@ module.exports = {
       "from": {
         "path": "^src/model(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/model-to-io/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/model-to-io/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
       }
     },
     {
-      "comment": "model does not declare render as an allowed module dependency.",
+      "comment": "model does not declare render as an allowed boundary dependency.",
       "from": {
         "path": "^src/model(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/model-to-render/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/model-to-render/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/render(?:/|$)"
       }
     },
     {
-      "comment": "model does not declare renderers as an allowed module dependency.",
+      "comment": "model does not declare renderers as an allowed boundary dependency.",
       "from": {
         "path": "^src/model(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/model-to-renderers/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/model-to-renderers/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/renderers(?:/|$)"
@@ -689,51 +689,51 @@ module.exports = {
       "from": {
         "path": "^src/model(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/model-to-targets/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/model-to-targets/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
       }
     },
     {
-      "comment": "render does not declare checks as an allowed module dependency.",
+      "comment": "render does not declare checks as an allowed boundary dependency.",
       "from": {
         "path": "^src/render(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/render-to-checks/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/render-to-checks/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/checks(?:/|$)"
       }
     },
     {
-      "comment": "render does not declare cli as an allowed module dependency.",
+      "comment": "render does not declare cli as an allowed boundary dependency.",
       "from": {
         "path": "^src/render(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/render-to-cli/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/render-to-cli/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/cli\\.ts(?:/|$)"
       }
     },
     {
-      "comment": "render does not declare diagnostics as an allowed module dependency.",
+      "comment": "render does not declare diagnostics as an allowed boundary dependency.",
       "from": {
         "path": "^src/render(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/render-to-diagnostics/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/render-to-diagnostics/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/diagnostics(?:/|$)"
       }
     },
     {
-      "comment": "render does not declare init as an allowed module dependency.",
+      "comment": "render does not declare init as an allowed boundary dependency.",
       "from": {
         "path": "^src/render(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/render-to-init/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/render-to-init/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/init(?:/|$)"
@@ -744,7 +744,7 @@ module.exports = {
       "from": {
         "path": "^src/render(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/render-to-integrations/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/render-to-integrations/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
@@ -755,7 +755,7 @@ module.exports = {
       "from": {
         "path": "^src/render(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/render-to-io/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/render-to-io/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
@@ -766,7 +766,7 @@ module.exports = {
       "from": {
         "path": "^src/render(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/render-to-model/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/render-to-model/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
@@ -777,7 +777,7 @@ module.exports = {
       "from": {
         "path": "^src/render(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/render-to-renderers/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/render-to-renderers/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
@@ -788,7 +788,7 @@ module.exports = {
       "from": {
         "path": "^src/render(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/render-to-targets/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/render-to-targets/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
@@ -799,62 +799,62 @@ module.exports = {
       "from": {
         "path": "^src/renderers(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/renderers-to-checks/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/renderers-to-checks/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
       }
     },
     {
-      "comment": "renderers does not declare cli as an allowed module dependency.",
+      "comment": "renderers does not declare cli as an allowed boundary dependency.",
       "from": {
         "path": "^src/renderers(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/renderers-to-cli/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/renderers-to-cli/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/cli\\.ts(?:/|$)"
       }
     },
     {
-      "comment": "renderers does not declare diagnostics as an allowed module dependency.",
+      "comment": "renderers does not declare diagnostics as an allowed boundary dependency.",
       "from": {
         "path": "^src/renderers(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/renderers-to-diagnostics/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/renderers-to-diagnostics/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/diagnostics(?:/|$)"
       }
     },
     {
-      "comment": "renderers does not declare init as an allowed module dependency.",
+      "comment": "renderers does not declare init as an allowed boundary dependency.",
       "from": {
         "path": "^src/renderers(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/renderers-to-init/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/renderers-to-init/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/init(?:/|$)"
       }
     },
     {
-      "comment": "renderers does not declare integrations as an allowed module dependency.",
+      "comment": "renderers does not declare integrations as an allowed boundary dependency.",
       "from": {
         "path": "^src/renderers(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/renderers-to-integrations/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/renderers-to-integrations/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/integrations(?:/|$)"
       }
     },
     {
-      "comment": "renderers does not declare io as an allowed module dependency.",
+      "comment": "renderers does not declare io as an allowed boundary dependency.",
       "from": {
         "path": "^src/renderers(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/renderers-to-io/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/renderers-to-io/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/io(?:/|$)"
@@ -865,7 +865,7 @@ module.exports = {
       "from": {
         "path": "^src/renderers(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/renderers-to-model/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/renderers-to-model/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
@@ -876,7 +876,7 @@ module.exports = {
       "from": {
         "path": "^src/renderers(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/renderers-to-render/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/renderers-to-render/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
@@ -887,106 +887,106 @@ module.exports = {
       "from": {
         "path": "^src/renderers(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/renderers-to-targets/internal-import",
+      "name": "architect-companion/cli.layer-boundaries/renderers-to-targets/internal-import",
       "severity": "error",
       "to": {
         "path": "^$"
       }
     },
     {
-      "comment": "targets does not declare checks as an allowed module dependency.",
+      "comment": "targets does not declare checks as an allowed boundary dependency.",
       "from": {
         "path": "^src/targets(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/targets-to-checks/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/targets-to-checks/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/checks(?:/|$)"
       }
     },
     {
-      "comment": "targets does not declare cli as an allowed module dependency.",
+      "comment": "targets does not declare cli as an allowed boundary dependency.",
       "from": {
         "path": "^src/targets(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/targets-to-cli/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/targets-to-cli/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/cli\\.ts(?:/|$)"
       }
     },
     {
-      "comment": "targets does not declare diagnostics as an allowed module dependency.",
+      "comment": "targets does not declare diagnostics as an allowed boundary dependency.",
       "from": {
         "path": "^src/targets(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/targets-to-diagnostics/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/targets-to-diagnostics/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/diagnostics(?:/|$)"
       }
     },
     {
-      "comment": "targets does not declare init as an allowed module dependency.",
+      "comment": "targets does not declare init as an allowed boundary dependency.",
       "from": {
         "path": "^src/targets(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/targets-to-init/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/targets-to-init/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/init(?:/|$)"
       }
     },
     {
-      "comment": "targets does not declare integrations as an allowed module dependency.",
+      "comment": "targets does not declare integrations as an allowed boundary dependency.",
       "from": {
         "path": "^src/targets(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/targets-to-integrations/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/targets-to-integrations/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/integrations(?:/|$)"
       }
     },
     {
-      "comment": "targets does not declare io as an allowed module dependency.",
+      "comment": "targets does not declare io as an allowed boundary dependency.",
       "from": {
         "path": "^src/targets(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/targets-to-io/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/targets-to-io/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/io(?:/|$)"
       }
     },
     {
-      "comment": "targets does not declare model as an allowed module dependency.",
+      "comment": "targets does not declare model as an allowed boundary dependency.",
       "from": {
         "path": "^src/targets(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/targets-to-model/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/targets-to-model/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/model(?:/|$)"
       }
     },
     {
-      "comment": "targets does not declare render as an allowed module dependency.",
+      "comment": "targets does not declare render as an allowed boundary dependency.",
       "from": {
         "path": "^src/targets(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/targets-to-render/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/targets-to-render/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/render(?:/|$)"
       }
     },
     {
-      "comment": "targets does not declare renderers as an allowed module dependency.",
+      "comment": "targets does not declare renderers as an allowed boundary dependency.",
       "from": {
         "path": "^src/targets(?:/|$)"
       },
-      "name": "architect-companion/module-boundaries/targets-to-renderers/undeclared-dependency",
+      "name": "architect-companion/cli.layer-boundaries/targets-to-renderers/undeclared-dependency",
       "severity": "error",
       "to": {
         "path": "^src/renderers(?:/|$)"

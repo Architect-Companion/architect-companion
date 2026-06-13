@@ -42,9 +42,7 @@ export function formatDoctorReport(report: DoctorReport): string {
 
   switch (report.profileLock.kind) {
     case "match":
-      lines.push(
-        `profile lock: matches ${report.profileLock.lock.profile.name}@${report.profileLock.lock.profile.version}.`,
-      );
+      lines.push(`profile lock: matches ${formatProfileList(report.profileLock.lock.profiles)}.`);
       break;
     case "missing":
       lines.push(
@@ -76,6 +74,10 @@ export function formatDoctorReport(report: DoctorReport): string {
   }
 
   return `${lines.join("\n")}\n`;
+}
+
+function formatProfileList(profiles: ProfileLockStatus["expected"]["profiles"]): string {
+  return profiles.map((profile) => `${profile.name}@${profile.version}`).join(", ");
 }
 
 export function doctorReportHasIssues(report: DoctorReport): boolean {

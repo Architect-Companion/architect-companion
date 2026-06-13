@@ -42,6 +42,8 @@ The CLI exposes `architect-companion --help`, `architect-companion --version`, `
 - [docs/rendering-and-checks.md](docs/rendering-and-checks.md): deterministic rendering, CI adapters, and the boundary between deterministic checks and AI-assisted review
 - [docs/glossary.md](docs/glossary.md): shared terminology for the project
 - [docs/decisions](docs/decisions): accepted architecture and product decisions
-- [profiles/modular-monolith](profiles/modular-monolith): opinionated backend TypeScript modular monolith profile
+- [profiles/cli](profiles/cli): guidance for layered command-line applications
+- [profiles/typescript](profiles/typescript): TypeScript guidance and implementations
+- [profiles/modular-monolith](profiles/modular-monolith): guidance for modular monolith architecture
 
 See [docs/product-thesis.md](docs/product-thesis.md) for the current thinking.

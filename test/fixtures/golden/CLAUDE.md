@@ -3,20 +3,26 @@
 # Claude Instructions
 
 Project: sample-project
-Profile: Modular Monolith (modular-monolith 0.2.0)
-Stack: typescript
+Profiles:
+- Modular Monolith (modular-monolith 0.2.0)
+- TypeScript (typescript 0.1.0)
+
+Languages: typescript
 
 ## Principles
 
-- Modules represent business capabilities: Model modules around stable business capabilities and the decisions they own. A module named for a capability such as billing, identity, catalog, or fulfillment is usually healthier than a module named controllers, repositories, utils, or shared.
-- Boundaries are designed through contracts first: Design the public contract before moving files or changing consumers. A good module boundary is expressed through public APIs, events, read models, tests, and ownership rules, not merely by placing code in a different directory.
-- Internals stay private so modules can change: Inside a module, prefer the simplest local structure that keeps the module understandable. Do not export repositories, entities, database clients, framework adapters, or helper folders to compensate for a weak public API.
-- Modules own behavior behind public APIs: Treat each module as the owner of its business behavior, data access, and invariants. Other modules should depend on the module's public API instead of reaching into its internal files.
-- Keep one deployable system while preserving module discipline: A modular monolith should remain easy to build, run, test, and deploy as one application. The modularity is in ownership, dependencies, contracts, and data access rules; extraction into services is an option, not the default goal.
+- Modules represent business capabilities (modular-monolith): Model modules around stable business capabilities and the decisions they own. A module named for a capability such as billing, identity, catalog, or fulfillment is usually healthier than a module named controllers, repositories, utils, or shared.
+- Boundaries are designed through contracts first (modular-monolith): Design the public contract before moving files or changing consumers. A good module boundary is expressed through public APIs, events, read models, tests, and ownership rules, not merely by placing code in a different directory.
+- Internals stay private so modules can change (modular-monolith): Inside a module, prefer the simplest local structure that keeps the module understandable. Do not export repositories, entities, database clients, framework adapters, or helper folders to compensate for a weak public API.
+- Modules own behavior behind public APIs (modular-monolith): Treat each module as the owner of its business behavior, data access, and invariants. Other modules should depend on the module's public API instead of reaching into its internal files.
+- Keep one deployable system while preserving module discipline (modular-monolith): A modular monolith should remain easy to build, run, test, and deploy as one application. The modularity is in ownership, dependencies, contracts, and data access rules; extraction into services is an option, not the default goal.
+- Keep boundary contracts explicit (typescript): Export stable TypeScript types from public entrypoints and avoid leaking internal framework, ORM, or filesystem details through those types.
 
 ## Policies
 
 ### Asynchronous event contracts
+
+Source: modular-monolith
 
 Severity: warning
 
@@ -26,6 +32,8 @@ Events crossing module boundaries must be named for facts that already happened,
 
 ### Data ownership
 
+Source: modular-monolith
+
 Severity: error
 
 Intent: Each persistent data structure has exactly one owning module.
@@ -33,6 +41,8 @@ Intent: Each persistent data structure has exactly one owning module.
 A modular monolith may use one physical database, but logical ownership must stay strict. One module owns each table, collection, repository, and write rule. Other modules must access that data through the owner module's public API, owner-published events, or explicit read models. Cross-module SQL joins, shared repositories, and direct reads of another module's tables are boundary violations unless captured as temporary exceptions.
 
 ### Migration ownership
+
+Source: modular-monolith
 
 Severity: error
 
@@ -42,6 +52,8 @@ Schema and data migrations belong to the module that owns the affected data. The
 
 ### Module boundaries
 
+Source: modular-monolith
+
 Severity: error
 
 Intent: Modules may import another module only when declared in allowed_dependencies and through that module's public API.
@@ -49,6 +61,8 @@ Intent: Modules may import another module only when declared in allowed_dependen
 Cross-module imports must be declared in allowed_dependencies and target the public_api path declared for the dependency module. Imports from another module's internal files, or from undeclared module dependencies, are boundary violations unless the dependency is redesigned or a documented exception is introduced.
 
 ### Public API contracts
+
+Source: modular-monolith
 
 Severity: error
 
@@ -58,6 +72,8 @@ A module's public API should live at the declared public_api entrypoint, typical
 
 ### Test placement
 
+Source: modular-monolith
+
 Severity: warning
 
 Intent: Tests should prove module behavior and contracts at the right boundary.
@@ -66,13 +82,15 @@ Put fast unit tests beside internal module code, module-level use-case and integ
 
 ### Transaction boundaries
 
+Source: modular-monolith
+
 Severity: error
 
 Intent: A command transaction belongs to one module and one use case.
 
 A transaction may write only data owned by the module executing the use case. If a workflow needs another module to change state, call that module's public API outside the owning transaction or publish an event for asynchronous follow-up. A transaction that writes across modules means the boundary is wrong, the workflow needs eventual consistency, or a temporary exception must be documented.
 
-## Modules
+## Boundaries
 
 - billing: src/modules/billing
   Public API: src/modules/billing/index.ts
@@ -85,6 +103,8 @@ A transaction may write only data owned by the module executing the use case. If
 
 ### Add a module
 
+Source: modular-monolith
+
 1. Name the business capability, decisions, invariants, and data the module will own.
 2. Check whether an existing module should own the behavior instead of creating a new boundary.
 3. Define the public API entrypoint before adding internal folders or consumers.
@@ -95,9 +115,11 @@ A transaction may write only data owned by the module executing the use case. If
 
 ### Change a module boundary
 
+Source: modular-monolith
+
 1. Identify the modules affected by the proposed boundary change.
 2. Decide whether the change needs a public API, an event, a read model, or a redesigned ownership boundary.
-3. Update module metadata and allowed_dependencies before changing consumers.
+3. Update boundary metadata and allowed_dependencies before changing consumers.
 4. Update the public API before changing consumers.
 5. Keep transaction and data ownership inside the owning module while moving behavior.
 6. Add or update module tests and cross-module contract tests.
@@ -105,6 +127,8 @@ A transaction may write only data owned by the module executing the use case. If
 8. Render and run the selected architecture checks before review.
 
 ### Deprecate a public API
+
+Source: modular-monolith
 
 1. Add the replacement API first and keep the old API as a thin compatibility layer.
 2. Record the owner, affected consumers, removal condition, and expected removal window.
@@ -114,6 +138,8 @@ A transaction may write only data owned by the module executing the use case. If
 6. Render and run the selected architecture checks before review.
 
 ### Extract a module
+
+Source: modular-monolith
 
 1. Identify the business capability, data ownership, and consumers that justify the new boundary.
 2. Define the target module public API and route current behavior through that contract.
@@ -127,12 +153,16 @@ A transaction may write only data owned by the module executing the use case. If
 
 ### API and event review
 
+Source: modular-monolith
+
 - Is the public API small enough that consumers depend on business operations instead of implementation details?
 - Does the API expose DTOs and value types instead of ORM entities, repositories, or framework objects?
 - Are events named as facts that happened rather than commands to specific consumers?
 - Can event consumers retry safely without producer knowledge or hidden ordering assumptions?
 
 ### Architecture review
+
+Source: modular-monolith
 
 - Does the change introduce a new dependency between modules?
 - Does every cross-module call use the target module's public API?
@@ -142,6 +172,8 @@ A transaction may write only data owned by the module executing the use case. If
 
 ### Data and transaction review
 
+Source: modular-monolith
+
 - Which module owns every table, collection, repository, and migration touched by this change?
 - Does any query read another module's owned data directly instead of using an API, event, or read model?
 - Does any transaction write data owned by more than one module?
@@ -149,12 +181,16 @@ A transaction may write only data owned by the module executing the use case. If
 
 ### Module design review
 
+Source: modular-monolith
+
 - Is the module named for a business capability rather than a technical layer?
 - Are its responsibilities cohesive enough that one owner can reason about its invariants?
 - Is the boundary stable enough to survive the next likely product change?
 - Would merging this behavior into an existing module reduce accidental coupling?
 
 ### Testing and migration review
+
+Source: modular-monolith
 
 - Are module-level tests covering use cases where the business invariants live?
 - Are cross-module expectations covered by contract tests instead of only end-to-end tests?
@@ -164,6 +200,8 @@ A transaction may write only data owned by the module executing the use case. If
 ## Examples
 
 ### Cross-module data access
+
+Source: modular-monolith
 
 Good:
 
@@ -184,6 +222,8 @@ const customer = await db.identityCustomer.findUnique({
 ```
 
 ### Event contract
+
+Source: modular-monolith
 
 Good:
 
@@ -208,6 +248,8 @@ export type InvoiceIssued = {
 
 ### Migration ownership
 
+Source: modular-monolith
+
 Good:
 
 ```ts
@@ -227,6 +269,8 @@ await db.schema.alterTable("billing_invoices").dropColumn("plan_snapshot");
 
 ### Module access
 
+Source: modular-monolith
+
 Good:
 
 ```ts
@@ -245,6 +289,8 @@ const customer = await loadCustomerRow(customerId);
 
 ### Module public API
 
+Source: modular-monolith
+
 Good:
 
 ```ts
@@ -262,6 +308,8 @@ export type { InvoiceRow } from "./internal/schema";
 ```
 
 ### Test placement
+
+Source: modular-monolith
 
 Good:
 
@@ -282,6 +330,8 @@ expect(await identityDb.customer.findUnique({ where: { id: customerId } })).toBe
 ```
 
 ### Transaction boundary
+
+Source: modular-monolith
 
 Good:
 

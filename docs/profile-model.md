@@ -4,158 +4,136 @@ See [Glossary](glossary.md) for shared terminology.
 
 ## Core Idea
 
-Architectural knowledge lives in profiles.
+Architectural knowledge lives in reusable profiles, and repositories compose
+the profiles they need.
 
-A profile is a versioned package of architectural guidance for a recurring system shape, such as a modular monolith, service-oriented backend, frontend application, or legacy modernization effort.
-
-For example, the knowledge about "how to build a good modular monolith" should live in a `modular-monolith` profile.
-
-## Two Locations
-
-There are two different places to think about:
-
-```text
-profiles/                       reusable profiles shipped by Architect Companion
-.architect-companion/           project-specific harness instance in a consuming repo
-```
-
-The first is the product's reusable knowledge base.
-
-The second is the consuming project's local configuration, selected profile, overrides, and project-specific architecture facts.
-
-## Product Repository
-
-The Architect Companion repository can ship profiles like this:
-
-```text
-profiles/
-  modular-monolith/
-    profile.yml
-    README.md
-    architecture/
-      boundaries.yml
-      layering.yml
-      module-catalogue.yml
-    policies/
-      dependencies.yml
-      public-api.yml
-      database-access.yml
-      testing.yml
-      adr-triggers.yml
-    workflows/
-      plan-change.md
-      add-module.md
-      change-module-boundary.md
-      review-change.md
-      propose-adr.md
-    heuristics/
-      architecture-review.md
-      modularity-review.md
-      refactoring-review.md
-    examples/
-      good-module.md
-      bad-module.md
-      boundary-exception.md
-```
-
-This is where reusable architectural knowledge lives.
-
-The profile should encode:
-
-- architectural principles
-- preferred boundaries
-- allowed and discouraged dependencies
-- expected testing strategy
-- change workflows
-- ADR triggers
-- review heuristics
-- examples of good and bad implementation choices
-- exception handling guidance
-
-## Consuming Repository
-
-A project using Architect Companion could contain:
-
-```text
-.architect-companion/
-  harness.yml
-  profile.lock.yml
-  overrides.yml
-  architecture/
-    components.yml
-    ownership.yml
-    boundaries.yml
-    exceptions.yml
-```
-
-The consuming project does not need to reinvent the modular monolith profile. It selects it, locks a version, and adds project-specific facts.
+A profile is a versioned bundle. It may contribute guidance, policies,
+workflows, examples, or policy implementations. Profiles are not categorized
+as "architecture profiles" or "technology profiles" in the user model; they
+are just composable bundles.
 
 For example:
 
-```yaml
-# .architect-companion/harness.yml
-profile:
-  name: modular-monolith
-  version: 0.2.0
+- `cli` describes how command-line applications should be structured.
+- `modular-monolith` describes business-capability modules and ownership.
+- `typescript` contributes TypeScript guidance and dependency-cruiser
+  implementations for selected policies.
 
+## Product Repository
+
+The Architect Companion repository ships a profile library:
+
+```text
+profiles/
+  cli/
+    profile.yml
+    README.md
+  modular-monolith/
+    profile.yml
+    README.md
+  typescript/
+    profile.yml
+    README.md
+```
+
+A profile can include:
+
+- architectural principles
+- policies
+- policy implementations
+- workflows
+- review heuristics
+- examples
+
+Profile item IDs are local to the profile. `cli.layer-boundaries` and
+`modular-monolith.module-boundaries` are different policies even though both
+can be implemented with the same dependency-cruiser renderer.
+
+## Consuming Repository
+
+A project using Architect Companion selects multiple profiles in
+`.architect-companion/harness.yml`:
+
+```yaml
+schemaVersion: 1
+profiles:
+  - name: cli
+    version: 0.1.0
+  - name: typescript
+    version: 0.1.0
+project:
+  name: architect-companion
+  languages:
+    - typescript
+boundaries: architecture/boundaries.yml
 targets:
   agentsMd: true
-  claudeMd: true
-  cursor: true
   dependencyCruiser: true
-  githubActions: true
 ```
 
-The local project then adds information the generic profile cannot know:
+The local project supplies facts the generic profiles cannot know:
 
-- actual modules
-- actual owners
-- actual dependency exceptions
-- actual test commands
-- actual technology choices
-- actual migration constraints
+- boundary names
+- boundary paths
+- public API entrypoints
+- allowed dependencies between boundaries
+- project languages
+- selected render targets
 
-## Reference, Copy, Or Vendor
+Boundary facts live in `.architect-companion/architecture/boundaries.yml`:
 
-There are three possible ways to use a profile:
-
-1. Reference it from the installed Architect Companion package.
-2. Copy it into `.architect-companion/` during initialization.
-3. Vendor a locked snapshot for maximum reproducibility.
-
-The preferred default should probably be a locked snapshot with explicit upgrade support:
-
-```bash
-architect-companion init --profile modular-monolith
-architect-companion profile update
-architect-companion render
+```yaml
+schemaVersion: 1
+boundaries:
+  - name: cli
+    path: src/cli.ts
+    public_api: src/cli.ts
+  - name: model
+    path: src/model
+    public_api: src/model
+allowed_dependencies:
+  cli:
+    - model
 ```
 
-That makes generated outputs reproducible and lets teams review profile upgrades like normal code changes.
+## Policy Implementations
 
-## What "Good Modular Monolith" Means
+A policy says what should be true. An implementation says how a selected tool
+can enforce or materialize that policy when the project context matches.
 
-The modular monolith profile should not say only "keep modules clean." It should make the opinion operational.
+Example from `profiles/typescript/profile.yml`:
 
-It should answer questions like:
+```yaml
+implementations:
+  - id: dependency-cruiser-cli-layer-boundaries
+    policy:
+      profile: cli
+      id: layer-boundaries
+    appliesTo:
+      language: typescript
+    engine: dependency-cruiser
+    renderer: dependency-cruiser-config
+```
 
-- What is a module?
-- What can cross module boundaries?
-- Can modules share database tables?
-- Where do commands, queries, events, and adapters live?
-- Which dependencies are allowed between modules?
-- When should a new module be introduced?
-- When should a module be split?
-- When should an ADR be required?
-- What tests prove that module boundaries still hold?
-- Which shortcuts are acceptable temporarily, and how are they tracked?
+An implementation is active only when:
 
-That is the architectural knowledge.
+- the implementation's source profile is selected
+- the referenced policy's source profile is selected
+- `project.languages` contains the implementation language
+- the relevant target is selected when rendering or checking
 
-## Product Implication
+Implementations that reference unselected policies or inactive languages are
+ignored. Active implementations that reference a selected but missing policy
+fail model resolution.
 
-The profile library is one of the main assets of Architect Companion.
+## Why This Split
 
-The CLI and renderers make profiles usable across agents and CI systems, but the profile content is where the opinion lives.
+The old `typescript-cli` shape did not scale because every technology and
+system-shape combination needed a dedicated profile. Composition lets a
+repository select `cli + typescript`, while another selects
+`modular-monolith + typescript`, and a future repository can select
+`modular-monolith + java` without duplicating modular-monolith guidance.
 
-Profiles may also declare which existing engines implement a policy for a given stack. For example, a TypeScript modular monolith profile may render dependency-cruiser configuration, while a Java profile may render or guide ArchUnit checks. Architect Companion should encode the intent and wiring, not rebuild those analyzers.
+Targets live in the harness, not in profiles. Profiles contribute reusable
+knowledge and implementations; projects decide which generated outputs they
+want.

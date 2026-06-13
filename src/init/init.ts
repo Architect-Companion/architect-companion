@@ -2,7 +2,7 @@ import { rm, rmdir } from "node:fs/promises";
 import path from "node:path";
 
 import { HarnessConfigError, loadEffectiveHarnessModel } from "../model/effective-model.js";
-import type { KnownTargetKey, SupportedStack } from "../model/effective-model.js";
+import type { KnownTargetKey } from "../model/effective-model.js";
 import {
   PROFILE_LOCK_FILE_PATH,
   ProfileLockError,
@@ -15,11 +15,11 @@ import { InitError } from "./errors.js";
 import { runPreflight } from "./preflight.js";
 import type { PreflightResolution } from "./preflight.js";
 import {
+  BOUNDARIES_FILE_PATH,
+  formatBoundariesYaml,
   formatHarnessYaml,
-  formatModulesYaml,
   HARNESS_DIRECTORY,
   HARNESS_FILE_PATH,
-  MODULES_FILE_PATH,
   writeScaffoldFiles,
 } from "./scaffold.js";
 
@@ -38,12 +38,12 @@ export type InitInputs = {
   disabledTargets: KnownTargetKey[];
   dryRun: boolean;
   enabledTargets: KnownTargetKey[];
+  languages: string[];
   noRender: boolean;
-  profileName: string;
+  profileNames: string[];
   profilesDir: string;
   projectDir: string;
   projectName: string;
-  stack?: SupportedStack;
 };
 
 type RollbackTracker = {
@@ -57,10 +57,10 @@ export async function runInit(inputs: InitInputs, io: InitIo): Promise<number> {
   const preflight = await runPreflight({
     disabledTargets: inputs.disabledTargets,
     enabledTargets: inputs.enabledTargets,
-    profileName: inputs.profileName,
+    languages: inputs.languages,
+    profileNames: inputs.profileNames,
     profilesDir: inputs.profilesDir,
     projectDir: inputs.projectDir,
-    ...(inputs.stack !== undefined ? { stack: inputs.stack } : {}),
   });
 
   if (inputs.dryRun) {
@@ -86,25 +86,22 @@ export async function runInit(inputs: InitInputs, io: InitIo): Promise<number> {
   process.once("SIGINT", sigintHandler);
 
   try {
-    io.stdout.write(
-      `Profile: ${preflight.profileMetadata.profile.name}@${preflight.profileMetadata.profile.version}\n`,
-    );
-    io.stdout.write(`Stack: ${preflight.resolvedStack}\n`);
+    io.stdout.write(`Profiles: ${formatProfileReferences(preflight.profileReferences)}\n`);
+    io.stdout.write(`Languages: ${preflight.languages.join(", ")}\n`);
     io.stdout.write(`Project: ${inputs.projectName}\n`);
 
     const scaffoldResult = await writeScaffoldFiles(inputs.projectDir, {
-      profileName: preflight.profileMetadata.profile.name,
-      profileVersion: preflight.profileMetadata.profile.version,
+      languages: preflight.languages,
+      profiles: preflight.profileReferences,
       projectName: inputs.projectName,
-      targetOverrides: preflight.targetOverrides,
-      ...(preflight.stackOverride !== undefined ? { stack: preflight.stackOverride } : {}),
+      targets: preflight.targets,
     });
     tracker.harnessDirectoryCreated = true;
     tracker.createdDirectories.push(...scaffoldResult.createdDirs);
     tracker.createdFiles.push(...scaffoldResult.createdFiles);
 
     io.stdout.write(`created ${HARNESS_FILE_PATH}\n`);
-    io.stdout.write(`created ${MODULES_FILE_PATH}\n`);
+    io.stdout.write(`created ${BOUNDARIES_FILE_PATH}\n`);
 
     const model = await loadEffectiveHarnessModel({
       profilesDir: inputs.profilesDir,
@@ -146,7 +143,7 @@ export async function runInit(inputs: InitInputs, io: InitIo): Promise<number> {
     }
 
     io.stdout.write(
-      `\nNext: declare your modules in ${MODULES_FILE_PATH}, then run \`architect-companion render\`.\n`,
+      `\nNext: declare your boundaries in ${BOUNDARIES_FILE_PATH}, then run \`architect-companion render\`.\n`,
     );
 
     return 0;
@@ -198,21 +195,20 @@ function writeDryRunPlan(io: InitIo, inputs: InitInputs, preflight: PreflightRes
   io.stdout.write("Pre-flight: OK\n\n");
 
   const harnessYaml = formatHarnessYaml({
-    profileName: preflight.profileMetadata.profile.name,
-    profileVersion: preflight.profileMetadata.profile.version,
+    languages: preflight.languages,
+    profiles: preflight.profileReferences,
     projectName: inputs.projectName,
-    targetOverrides: preflight.targetOverrides,
-    ...(preflight.stackOverride !== undefined ? { stack: preflight.stackOverride } : {}),
+    targets: preflight.targets,
   });
 
-  const modulesYaml = formatModulesYaml();
+  const boundariesYaml = formatBoundariesYaml();
 
   io.stdout.write(`Would create ${HARNESS_FILE_PATH}:\n`);
   io.stdout.write(indentBlock(harnessYaml));
   io.stdout.write("\n");
 
-  io.stdout.write(`Would create ${MODULES_FILE_PATH}:\n`);
-  io.stdout.write(indentBlock(modulesYaml));
+  io.stdout.write(`Would create ${BOUNDARIES_FILE_PATH}:\n`);
+  io.stdout.write(indentBlock(boundariesYaml));
   io.stdout.write("\n");
 
   io.stdout.write(`Would create ${PROFILE_LOCK_FILE_PATH}\n`);
@@ -229,6 +225,10 @@ function writeDryRunPlan(io: InitIo, inputs: InitInputs, preflight: PreflightRes
   }
 
   io.stdout.write("\nNo files written (dry-run).\n");
+}
+
+function formatProfileReferences(profiles: PreflightResolution["profileReferences"]): string {
+  return profiles.map((profile) => `${profile.name}@${profile.version}`).join(", ");
 }
 
 function indentBlock(value: string): string {

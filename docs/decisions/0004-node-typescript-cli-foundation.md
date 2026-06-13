@@ -6,10 +6,9 @@ Accepted
 
 ## Context
 
-The project needs a minimal executable foundation that fits the first
-supported stack (a TypeScript modular monolith) without introducing
-implementation dependencies before the model, renderers, and checks take
-shape.
+The project needs a minimal executable foundation that fits the first supported
+profile combinations without introducing implementation dependencies before the
+model, renderers, and checks take shape.
 
 ## Decision
 

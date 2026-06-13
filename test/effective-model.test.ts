@@ -15,7 +15,7 @@ const profilesDir = fileURLToPath(new URL("../profiles", import.meta.url));
 const sampleProjectDir = fileURLToPath(new URL("fixtures/sample-project", import.meta.url));
 
 describe("loadEffectiveHarnessModel", () => {
-  it("loads a stable effective model from profile and project config", async () => {
+  it("loads a stable effective model from composed profiles and project config", async () => {
     const model = await loadEffectiveHarnessModel({
       profilesDir,
       projectDir: sampleProjectDir,
@@ -25,7 +25,7 @@ describe("loadEffectiveHarnessModel", () => {
       allowedDependencies: {
         billing: ["identity"],
       },
-      modules: [
+      boundaries: [
         {
           name: "billing",
           path: "src/modules/billing",
@@ -37,17 +37,24 @@ describe("loadEffectiveHarnessModel", () => {
           publicApi: "src/modules/identity/index.ts",
         },
       ],
-      profile: {
-        name: "modular-monolith",
-        summary: "Opinionated guidance for backend TypeScript modular monoliths.",
-        title: "Modular Monolith",
-        version: "0.2.0",
-      },
+      profiles: [
+        {
+          name: "modular-monolith",
+          summary: "Opinionated guidance for backend modular monoliths.",
+          title: "Modular Monolith",
+          version: "0.2.0",
+        },
+        {
+          name: "typescript",
+          title: "TypeScript",
+          version: "0.1.0",
+        },
+      ],
       project: {
+        languages: ["typescript"],
         name: "sample-project",
       },
       schemaVersion: 1,
-      stack: "typescript",
       targets: {
         agentsMd: true,
         claudeMd: false,
@@ -56,52 +63,40 @@ describe("loadEffectiveHarnessModel", () => {
         githubActions: false,
       },
     });
-    expect(model.principles.map((principle) => principle.id)).toEqual([
-      "business-capability-modules",
-      "contract-first-boundaries",
-      "internal-freedom",
-      "module-ownership",
-      "operational-modularity",
-    ]);
-    expect(model.policies.map((policy) => policy.id)).toEqual([
-      "async-event-contracts",
-      "data-ownership",
-      "migration-ownership",
-      "module-boundaries",
-      "public-api-contracts",
-      "test-placement",
-      "transaction-boundaries",
-    ]);
-    expect(model.workflows.map((workflow) => workflow.id)).toEqual([
-      "add-module",
-      "change-module-boundary",
-      "deprecate-public-api",
-      "extract-module",
-    ]);
-    expect(model.heuristics.map((heuristic) => heuristic.id)).toEqual([
-      "api-and-event-review",
-      "architecture-review",
-      "data-and-transaction-review",
-      "module-design-review",
-      "testing-and-migration-review",
-    ]);
-    expect(model.examples.map((example) => example.id)).toEqual([
-      "cross-module-data-access",
-      "event-contract",
-      "migration-ownership",
-      "module-access",
-      "module-public-api",
-      "test-placement",
-      "transaction-boundary",
-    ]);
     expect(
-      model.policies.find((policy) => policy.id === "module-boundaries")?.implementation,
-    ).toEqual({
-      typescript: {
+      model.principles.map((principle) => `${principle.sourceProfile}.${principle.id}`),
+    ).toEqual([
+      "modular-monolith.business-capability-modules",
+      "modular-monolith.contract-first-boundaries",
+      "modular-monolith.internal-freedom",
+      "modular-monolith.module-ownership",
+      "modular-monolith.operational-modularity",
+      "typescript.type-contracts-at-boundaries",
+    ]);
+    expect(model.policies.map((policy) => `${policy.sourceProfile}.${policy.id}`)).toEqual([
+      "modular-monolith.async-event-contracts",
+      "modular-monolith.data-ownership",
+      "modular-monolith.migration-ownership",
+      "modular-monolith.module-boundaries",
+      "modular-monolith.public-api-contracts",
+      "modular-monolith.test-placement",
+      "modular-monolith.transaction-boundaries",
+    ]);
+    expect(model.implementations).toEqual([
+      {
+        appliesTo: {
+          language: "typescript",
+        },
         engine: "dependency-cruiser",
+        id: "dependency-cruiser-modular-monolith-module-boundaries",
+        policy: {
+          id: "module-boundaries",
+          profile: "modular-monolith",
+        },
         renderer: "dependency-cruiser-config",
+        sourceProfile: "typescript",
       },
-    });
+    ]);
   });
 
   it("produces deterministic output across repeated loads", async () => {
@@ -129,23 +124,29 @@ describe("loadEffectiveHarnessModel", () => {
     }
   });
 
-  it("fails when the profile version does not match", async () => {
+  it("fails when a profile version does not match", async () => {
     const projectDir = copySampleProject();
-    writeFileSync(
-      join(projectDir, ".architect-companion", "harness.yml"),
+    writeHarness(
+      projectDir,
       `schemaVersion: 1
-profile:
-  name: modular-monolith
-  version: 9.9.9
+profiles:
+  - name: modular-monolith
+    version: 9.9.9
+  - name: typescript
+    version: 0.1.0
 project:
   name: sample-project
-modules: architecture/modules.yml
+  languages:
+    - typescript
+boundaries: architecture/boundaries.yml
+targets:
+  agentsMd: true
 `,
     );
 
     try {
       await expect(loadEffectiveHarnessModel({ profilesDir, projectDir })).rejects.toThrow(
-        /profile\.version "9\.9\.9" does not match/,
+        /profile "modular-monolith" version "9\.9\.9" does not match/,
       );
     } finally {
       rmSync(projectDir, { force: true, recursive: true });
@@ -157,12 +158,15 @@ modules: architecture/modules.yml
     writeFileSync(
       join(projectDir, ".architect-companion", "harness.yml"),
       `schemaVersion: 2
-profile:
-  name: modular-monolith
-  version: 0.2.0
+profiles:
+  - name: modular-monolith
+    version: 0.2.0
 project:
   name: sample-project
-modules: architecture/modules.yml
+  languages:
+    - typescript
+boundaries: architecture/boundaries.yml
+targets: {}
 `,
     );
 
@@ -177,15 +181,21 @@ modules: architecture/modules.yml
 
   it("fails when the project name is not an identifier", async () => {
     const projectDir = copySampleProject();
-    writeFileSync(
-      join(projectDir, ".architect-companion", "harness.yml"),
+    writeHarness(
+      projectDir,
       `schemaVersion: 1
-profile:
-  name: modular-monolith
-  version: 0.2.0
+profiles:
+  - name: modular-monolith
+    version: 0.2.0
+  - name: typescript
+    version: 0.1.0
 project:
   name: My Project
-modules: architecture/modules.yml
+  languages:
+    - typescript
+boundaries: architecture/boundaries.yml
+targets:
+  agentsMd: true
 `,
     );
 
@@ -198,36 +208,37 @@ modules: architecture/modules.yml
     }
   });
 
-  it("fails when module names are duplicated", async () => {
+  it("fails when boundary names are duplicated", async () => {
     const projectDir = copySampleProject();
     writeFileSync(
-      join(projectDir, ".architect-companion", "architecture", "modules.yml"),
+      join(projectDir, ".architect-companion", "architecture", "boundaries.yml"),
       `schemaVersion: 1
-modules:
+boundaries:
   - name: billing
     path: src/modules/billing
     public_api: src/modules/billing/index.ts
   - name: billing
     path: src/modules/billing-copy
     public_api: src/modules/billing-copy/index.ts
+allowed_dependencies: {}
 `,
     );
 
     try {
       await expect(loadEffectiveHarnessModel({ profilesDir, projectDir })).rejects.toThrow(
-        /duplicates module "billing"/,
+        /duplicates boundary "billing"/,
       );
     } finally {
       rmSync(projectDir, { force: true, recursive: true });
     }
   });
 
-  it("fails when allowed dependencies reference an unknown module", async () => {
+  it("fails when allowed dependencies reference an unknown boundary", async () => {
     const projectDir = copySampleProject();
     writeFileSync(
-      join(projectDir, ".architect-companion", "architecture", "modules.yml"),
+      join(projectDir, ".architect-companion", "architecture", "boundaries.yml"),
       `schemaVersion: 1
-modules:
+boundaries:
   - name: billing
     path: src/modules/billing
     public_api: src/modules/billing/index.ts
@@ -239,7 +250,7 @@ allowed_dependencies:
 
     try {
       await expect(loadEffectiveHarnessModel({ profilesDir, projectDir })).rejects.toThrow(
-        /allowed_dependencies\.billing\[0\] references unknown module "identity"/,
+        /allowed_dependencies\.billing\[0\] references unknown boundary "identity"/,
       );
     } finally {
       rmSync(projectDir, { force: true, recursive: true });
@@ -264,15 +275,21 @@ allowed_dependencies:
 
   it("fails for unknown fields", async () => {
     const projectDir = copySampleProject();
-    writeFileSync(
-      join(projectDir, ".architect-companion", "harness.yml"),
+    writeHarness(
+      projectDir,
       `schemaVersion: 1
-profile:
-  name: modular-monolith
-  version: 0.2.0
+profiles:
+  - name: modular-monolith
+    version: 0.2.0
+  - name: typescript
+    version: 0.1.0
 project:
   name: sample-project
-modules: architecture/modules.yml
+  languages:
+    - typescript
+boundaries: architecture/boundaries.yml
+targets:
+  agentsMd: true
 unexpected: true
 `,
     );
@@ -304,7 +321,10 @@ examples: []
 
     try {
       await expect(
-        loadEffectiveHarnessModel({ profilesDir: tempProfilesDir, projectDir: sampleProjectDir }),
+        loadEffectiveHarnessModel({
+          profilesDir: tempProfilesDir,
+          projectDir: singleProfileProject(),
+        }),
       ).rejects.toThrow(/principles\[0\]\.unexpected is not supported/);
     } finally {
       rmSync(tempProfilesDir, { force: true, recursive: true });
@@ -328,7 +348,10 @@ examples: []
 
     try {
       await expect(
-        loadEffectiveHarnessModel({ profilesDir: tempProfilesDir, projectDir: sampleProjectDir }),
+        loadEffectiveHarnessModel({
+          profilesDir: tempProfilesDir,
+          projectDir: singleProfileProject(),
+        }),
       ).rejects.toThrow(/principles\[0\]\.title must be a non-empty string/);
     } finally {
       rmSync(tempProfilesDir, { force: true, recursive: true });
@@ -354,7 +377,10 @@ examples: []
 
     try {
       await expect(
-        loadEffectiveHarnessModel({ profilesDir: tempProfilesDir, projectDir: sampleProjectDir }),
+        loadEffectiveHarnessModel({
+          profilesDir: tempProfilesDir,
+          projectDir: singleProfileProject(),
+        }),
       ).rejects.toThrow(/policies\[0\]\.severity must be one of: advisory, warning, error/);
     } finally {
       rmSync(tempProfilesDir, { force: true, recursive: true });
@@ -379,14 +405,50 @@ examples: []
 
     try {
       await expect(
-        loadEffectiveHarnessModel({ profilesDir: tempProfilesDir, projectDir: sampleProjectDir }),
+        loadEffectiveHarnessModel({
+          profilesDir: tempProfilesDir,
+          projectDir: singleProfileProject(),
+        }),
       ).rejects.toThrow(/policies\[0\]\.severity must be a non-empty string/);
     } finally {
       rmSync(tempProfilesDir, { force: true, recursive: true });
     }
   });
 
-  it("fails for invalid policy implementation metadata", async () => {
+  it("fails for invalid implementation metadata", async () => {
+    const tempProfilesDir = copyProfiles();
+    writeProfile(
+      tempProfilesDir,
+      profileYaml(`principles: []
+policies: []
+workflows: []
+heuristics: []
+examples: []
+implementations:
+  - id: custom-implementation
+    policy:
+      profile: modular-monolith
+      id: module-boundaries
+    appliesTo:
+      language: typescript
+    engine: custom-analyzer
+    renderer: dependency-cruiser-config
+`),
+    );
+
+    try {
+      await expect(
+        loadEffectiveHarnessModel({
+          profilesDir: tempProfilesDir,
+          projectDir: singleProfileProject(),
+        }),
+      ).rejects.toThrow(/implementations\[0\]\.engine must be one of: dependency-cruiser/);
+    } finally {
+      rmSync(tempProfilesDir, { force: true, recursive: true });
+    }
+  });
+
+  it("allows profiles without implementations", async () => {
     const tempProfilesDir = copyProfiles();
     writeProfile(
       tempProfilesDir,
@@ -397,10 +459,33 @@ policies:
     intent: Modules import through public APIs.
     severity: error
     guidance: Keep cross-module imports on public APIs.
-    implementation:
-      typescript:
-        engine: custom-analyzer
-        renderer: dependency-cruiser-config
+workflows: []
+heuristics: []
+examples: []
+`),
+    );
+    const projectDir = singleProfileProject();
+
+    try {
+      const model = await loadEffectiveHarnessModel({
+        profilesDir: tempProfilesDir,
+        projectDir,
+      });
+
+      expect(model.policies).toHaveLength(1);
+      expect(model.implementations).toEqual([]);
+    } finally {
+      rmSync(tempProfilesDir, { force: true, recursive: true });
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+
+  it("fails when an active implementation references a missing selected policy", async () => {
+    const tempProfilesDir = copyProfiles();
+    writeProfile(
+      tempProfilesDir,
+      profileYaml(`principles: []
+policies: []
 workflows: []
 heuristics: []
 examples: []
@@ -410,39 +495,7 @@ examples: []
     try {
       await expect(
         loadEffectiveHarnessModel({ profilesDir: tempProfilesDir, projectDir: sampleProjectDir }),
-      ).rejects.toThrow(/implementation\.typescript\.engine must be one of: dependency-cruiser/);
-    } finally {
-      rmSync(tempProfilesDir, { force: true, recursive: true });
-    }
-  });
-
-  it("omits empty policy implementation metadata", async () => {
-    const tempProfilesDir = copyProfiles();
-    writeProfile(
-      tempProfilesDir,
-      profileYaml(`principles: []
-policies:
-  - id: module-boundaries
-    title: Module boundaries
-    intent: Modules import through public APIs.
-    severity: error
-    guidance: Keep cross-module imports on public APIs.
-    implementation: {}
-workflows: []
-heuristics: []
-examples: []
-`),
-    );
-
-    try {
-      const model = await loadEffectiveHarnessModel({
-        profilesDir: tempProfilesDir,
-        projectDir: sampleProjectDir,
-      });
-
-      expect(model.policies).toHaveLength(1);
-      expect(model.policies[0]?.implementation).toBeUndefined();
-      expect(serializeEffectiveHarnessModel(model)).not.toContain('"implementation": {}');
+      ).rejects.toThrow(/references selected policy "modular-monolith\.module-boundaries"/);
     } finally {
       rmSync(tempProfilesDir, { force: true, recursive: true });
     }
@@ -465,7 +518,10 @@ examples: []
 
     try {
       await expect(
-        loadEffectiveHarnessModel({ profilesDir: tempProfilesDir, projectDir: sampleProjectDir }),
+        loadEffectiveHarnessModel({
+          profilesDir: tempProfilesDir,
+          projectDir: singleProfileProject(),
+        }),
       ).rejects.toThrow(/workflows\[0\]\.steps must be an array/);
     } finally {
       rmSync(tempProfilesDir, { force: true, recursive: true });
@@ -489,7 +545,10 @@ examples: []
 
     try {
       await expect(
-        loadEffectiveHarnessModel({ profilesDir: tempProfilesDir, projectDir: sampleProjectDir }),
+        loadEffectiveHarnessModel({
+          profilesDir: tempProfilesDir,
+          projectDir: singleProfileProject(),
+        }),
       ).rejects.toThrow(/workflows\[0\]\.steps must include at least one item/);
     } finally {
       rmSync(tempProfilesDir, { force: true, recursive: true });
@@ -513,14 +572,17 @@ examples: []
 
     try {
       await expect(
-        loadEffectiveHarnessModel({ profilesDir: tempProfilesDir, projectDir: sampleProjectDir }),
+        loadEffectiveHarnessModel({
+          profilesDir: tempProfilesDir,
+          projectDir: singleProfileProject(),
+        }),
       ).rejects.toThrow(/heuristics\[0\]\.questions must be an array/);
     } finally {
       rmSync(tempProfilesDir, { force: true, recursive: true });
     }
   });
 
-  it("fails when profile guidance ids are duplicated", async () => {
+  it("fails when profile guidance ids are duplicated within one profile", async () => {
     const tempProfilesDir = copyProfiles();
     writeProfile(
       tempProfilesDir,
@@ -540,14 +602,17 @@ examples: []
 
     try {
       await expect(
-        loadEffectiveHarnessModel({ profilesDir: tempProfilesDir, projectDir: sampleProjectDir }),
+        loadEffectiveHarnessModel({
+          profilesDir: tempProfilesDir,
+          projectDir: singleProfileProject(),
+        }),
       ).rejects.toThrow(/principles\[1\]\.id duplicates "module-ownership"/);
     } finally {
       rmSync(tempProfilesDir, { force: true, recursive: true });
     }
   });
 
-  it("sorts profile guidance sections deterministically by id", async () => {
+  it("sorts profile guidance sections by profile order then id", async () => {
     const tempProfilesDir = copyProfiles();
     writeProfile(
       tempProfilesDir,
@@ -598,11 +663,12 @@ examples:
     bad: First bad example.
 `),
     );
+    const projectDir = singleProfileProject();
 
     try {
       const model = await loadEffectiveHarnessModel({
         profilesDir: tempProfilesDir,
-        projectDir: sampleProjectDir,
+        projectDir,
       });
 
       expect(model.principles.map((principle) => principle.id)).toEqual([
@@ -618,6 +684,7 @@ examples:
       expect(model.examples.map((example) => example.id)).toEqual(["a-example", "z-example"]);
     } finally {
       rmSync(tempProfilesDir, { force: true, recursive: true });
+      rmSync(projectDir, { force: true, recursive: true });
     }
   });
 });
@@ -626,6 +693,30 @@ function copySampleProject(): string {
   const projectDir = mkdtempSync(join(tmpdir(), "architect-companion-project-"));
   cpSync(sampleProjectDir, projectDir, { recursive: true });
   return projectDir;
+}
+
+function singleProfileProject(): string {
+  const projectDir = copySampleProject();
+  writeHarness(
+    projectDir,
+    `schemaVersion: 1
+profiles:
+  - name: modular-monolith
+    version: 0.2.0
+project:
+  name: sample-project
+  languages:
+    - typescript
+boundaries: architecture/boundaries.yml
+targets:
+  agentsMd: true
+`,
+  );
+  return projectDir;
+}
+
+function writeHarness(projectDir: string, source: string): void {
+  writeFileSync(join(projectDir, ".architect-companion", "harness.yml"), source);
 }
 
 function copyProfiles(): string {
@@ -645,9 +736,5 @@ profile:
   version: 0.2.0
   title: Modular Monolith
   summary: Test profile.
-defaults:
-  stack: typescript
-  targets:
-    agentsMd: true
 ${sections}`;
 }

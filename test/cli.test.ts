@@ -102,14 +102,20 @@ describe("runCli", () => {
 
     expect(exitCode).toBe(0);
     expect(JSON.parse(writes.stdout)).toMatchObject({
-      profile: {
-        name: "modular-monolith",
-        version: "0.2.0",
-      },
+      profiles: [
+        {
+          name: "modular-monolith",
+          version: "0.2.0",
+        },
+        {
+          name: "typescript",
+          version: "0.1.0",
+        },
+      ],
       project: {
+        languages: ["typescript"],
         name: "sample-project",
       },
-      stack: "typescript",
     });
     expect(writes.stderr).toBe("");
   });
@@ -195,10 +201,13 @@ describe("runCli", () => {
       writeFileSync(
         join(projectDir, ".architect-companion/profile.lock.yml"),
         `schemaVersion: 1
-profile:
-  name: modular-monolith
-  version: 0.2.0
-  contentHash: sha256-0000000000000000000000000000000000000000000000000000000000000000
+profiles:
+  - name: modular-monolith
+    version: 0.2.0
+    contentHash: sha256-0000000000000000000000000000000000000000000000000000000000000000
+  - name: typescript
+    version: 0.1.0
+    contentHash: sha256-0000000000000000000000000000000000000000000000000000000000000000
 `,
       );
 
@@ -259,7 +268,9 @@ profile:
       );
 
       expect(exitCode).toBe(0);
-      expect(doctorIo.writes.stdout).toContain("profile lock: matches modular-monolith@0.2.0");
+      expect(doctorIo.writes.stdout).toContain(
+        "profile lock: matches modular-monolith@0.2.0, typescript@0.1.0",
+      );
       expect(doctorIo.writes.stdout).toContain("tools: all required external tools are reachable");
     } finally {
       rmSync(projectDir, { force: true, recursive: true });
@@ -275,12 +286,16 @@ profile:
       writeFileSync(
         join(projectDir, ".architect-companion/harness.yml"),
         `schemaVersion: 1
-profile:
-  name: modular-monolith
-  version: 0.2.0
+profiles:
+  - name: modular-monolith
+    version: 0.2.0
+  - name: typescript
+    version: 0.1.0
 project:
   name: sample-project
-modules: architecture/modules.yml
+  languages:
+    - typescript
+boundaries: architecture/boundaries.yml
 targets:
   agentsMd: false
   dependencyCruiser: true

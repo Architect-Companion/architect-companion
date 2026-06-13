@@ -6,11 +6,11 @@ Accepted
 
 ## Context
 
-Architect Companion ships reusable profiles. A consuming repository selects a profile
-by `name` and `version` from its `harness.yml`. The profile content lives outside the
+Architect Companion ships reusable profiles. A consuming repository selects profiles
+by `name` and `version` from its `harness.yml`. Profile content lives outside the
 repository (in the installed package) and can change when the package is upgraded.
 
-Without an integrity record, a profile content change would silently propagate into
+Without integrity records, profile content changes would silently propagate into
 every consumer on the next install. The renderer would happily produce different
 guidance and tool configuration from the same `harness.yml`.
 
@@ -20,24 +20,24 @@ profile changes explicit instead of silent.
 
 ## Decision
 
-Architect Companion records the resolved profile in
+Architect Companion records the resolved profiles in
 `.architect-companion/profile.lock.yml`. The lock pins:
 
 - `profile.name`
 - `profile.version`
 - `profile.contentHash` (SHA-256 of `profile.yml` bytes)
 
-`render` verifies the lock against the currently resolved profile:
+`render` verifies the lock against the currently resolved profiles:
 
 - Missing lock: `render` creates the lock as part of its first run; `render --check`
   reports the missing lock as stale and exits non-zero.
 - Matching lock: `render` proceeds normally.
-- Stale lock (different name, version, or content hash): `render` and `render --check`
+- Stale lock (different names, order, versions, or content hashes): `render` and `render --check`
   refuse to run and instruct the user to review the change with
   `architect-companion upgrade-profile`.
 
 The new `architect-companion upgrade-profile` command rewrites the lock to the
-currently resolved profile. The new `architect-companion doctor` command surfaces
+currently resolved profiles. The new `architect-companion doctor` command surfaces
 lock status alongside other adoption diagnostics.
 
 ## Consequences

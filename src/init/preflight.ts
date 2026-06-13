@@ -6,62 +6,67 @@ import {
   HarnessConfigError,
   knownTargetKeys,
   loadProfileMetadata,
-  supportedStacks,
 } from "../model/effective-model.js";
-import type { KnownTargetKey, ProfileMetadata, SupportedStack } from "../model/effective-model.js";
+import type {
+  KnownTargetKey,
+  ProfileMetadata,
+  ProfileReference,
+} from "../model/effective-model.js";
 import { GENERATED_FILE_MARKER, getRendererOutputs, RenderError } from "../render/render.js";
 import type { RendererOutput } from "../render/render.js";
 
 import { InitError } from "./errors.js";
 import { HARNESS_DIRECTORY } from "./scaffold.js";
 
+const defaultTargets: Partial<Record<KnownTargetKey, boolean>> = {
+  agentsMd: true,
+};
+
 export type PreflightOptions = {
   disabledTargets: KnownTargetKey[];
   enabledTargets: KnownTargetKey[];
-  profileName: string;
+  languages: string[];
+  profileNames: string[];
   profilesDir: string;
   projectDir: string;
-  stack?: SupportedStack;
 };
 
 export type PreflightResolution = {
+  languages: string[];
   mergedTargets: Record<KnownTargetKey, boolean>;
   preExistingDirectories: Set<string>;
   preExistingFiles: Set<string>;
-  profileMetadata: ProfileMetadata;
+  profileMetadata: ProfileMetadata[];
+  profileReferences: ProfileReference[];
   renderOutputs: RendererOutput[];
-  resolvedStack: SupportedStack;
-  stackOverride?: SupportedStack;
-  targetOverrides: Partial<Record<KnownTargetKey, boolean>>;
+  targets: Partial<Record<KnownTargetKey, boolean>>;
 };
 
 export async function runPreflight(options: PreflightOptions): Promise<PreflightResolution> {
   await assertHarnessDirectoryAbsent(options.projectDir);
 
-  const profileMetadata = await loadProfile(options.profilesDir, options.profileName);
-  const resolvedStack = resolveStack(options.stack, profileMetadata);
+  const profileMetadata = await loadProfiles(options.profilesDir, options.profileNames);
   const mergedTargets = mergeTargets(
-    profileMetadata.defaults.targets,
+    defaultTargets,
     options.enabledTargets,
     options.disabledTargets,
   );
   const renderOutputs = computeRenderOutputs(mergedTargets);
-
   const preExistence = await checkRenderOutputPreExistence(options.projectDir, renderOutputs);
 
-  const resolution: PreflightResolution = {
+  return {
+    languages: options.languages,
     mergedTargets,
     preExistingDirectories: preExistence.directories,
     preExistingFiles: preExistence.files,
     profileMetadata,
+    profileReferences: profileMetadata.map((metadata) => ({
+      name: metadata.profile.name,
+      version: metadata.profile.version,
+    })),
     renderOutputs,
-    resolvedStack,
-    targetOverrides: computeTargetOverrides(profileMetadata.defaults.targets, mergedTargets),
+    targets: computeSelectedTargets(mergedTargets),
   };
-  if (options.stack !== undefined) {
-    resolution.stackOverride = options.stack;
-  }
-  return resolution;
 }
 
 export async function assertHarnessDirectoryAbsent(projectDir: string): Promise<void> {
@@ -80,9 +85,22 @@ export async function assertHarnessDirectoryAbsent(projectDir: string): Promise<
   );
 }
 
-async function loadProfile(profilesDir: string, profileName: string): Promise<ProfileMetadata> {
+async function loadProfiles(
+  profilesDir: string,
+  profileNames: string[],
+): Promise<ProfileMetadata[]> {
+  const seen = new Set<string>();
+  for (const profileName of profileNames) {
+    if (seen.has(profileName)) {
+      throw new InitError(`--profile ${profileName} was provided more than once.`);
+    }
+    seen.add(profileName);
+  }
+
   try {
-    return await loadProfileMetadata(profilesDir, profileName);
+    return await Promise.all(
+      profileNames.map((profileName) => loadProfileMetadata(profilesDir, profileName)),
+    );
   } catch (error: unknown) {
     if (error instanceof HarnessConfigError) {
       throw new InitError(error.message);
@@ -91,38 +109,14 @@ async function loadProfile(profilesDir: string, profileName: string): Promise<Pr
   }
 }
 
-function resolveStack(
-  userStack: SupportedStack | undefined,
-  profileMetadata: ProfileMetadata,
-): SupportedStack {
-  const profileStack = profileMetadata.defaults.stack;
-
-  if (userStack === undefined) {
-    if (profileStack === undefined) {
-      throw new InitError(
-        `profile ${profileMetadata.profile.name}@${profileMetadata.profile.version} declares no default stack; pass --stack <${supportedStacks.join(" | ")}>.`,
-      );
-    }
-    return profileStack;
-  }
-
-  if (profileStack !== undefined && profileStack !== userStack) {
-    throw new InitError(
-      `--stack ${userStack} is not supported by profile ${profileMetadata.profile.name}@${profileMetadata.profile.version} (supports: ${profileStack}).`,
-    );
-  }
-
-  return userStack;
-}
-
 function mergeTargets(
-  profileDefaults: Partial<Record<KnownTargetKey, boolean>>,
+  defaults: Partial<Record<KnownTargetKey, boolean>>,
   enabledTargets: KnownTargetKey[],
   disabledTargets: KnownTargetKey[],
 ): Record<KnownTargetKey, boolean> {
   const merged = {} as Record<KnownTargetKey, boolean>;
   for (const target of knownTargetKeys) {
-    merged[target] = profileDefaults[target] === true;
+    merged[target] = defaults[target] === true;
   }
   for (const target of enabledTargets) {
     merged[target] = true;
@@ -133,18 +127,16 @@ function mergeTargets(
   return merged;
 }
 
-function computeTargetOverrides(
-  profileDefaults: Partial<Record<KnownTargetKey, boolean>>,
+function computeSelectedTargets(
   mergedTargets: Record<KnownTargetKey, boolean>,
 ): Partial<Record<KnownTargetKey, boolean>> {
-  const overrides: Partial<Record<KnownTargetKey, boolean>> = {};
+  const targets: Partial<Record<KnownTargetKey, boolean>> = {};
   for (const target of knownTargetKeys) {
-    const defaultValue = profileDefaults[target] === true;
-    if (mergedTargets[target] !== defaultValue) {
-      overrides[target] = mergedTargets[target];
+    if (mergedTargets[target]) {
+      targets[target] = true;
     }
   }
-  return overrides;
+  return targets;
 }
 
 function computeRenderOutputs(mergedTargets: Record<KnownTargetKey, boolean>): RendererOutput[] {

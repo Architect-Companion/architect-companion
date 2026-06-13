@@ -1,5 +1,5 @@
-import { dependencyCruiserPolicyImplementationContract } from "../integrations/dependency-cruiser.js";
 import type { EffectiveHarnessModel, KnownTargetKey } from "../model/effective-model.js";
+import { formatPolicyReference } from "../model/effective-model.js";
 
 export type CapabilityWarning = {
   code: CapabilityWarningCode;
@@ -8,33 +8,40 @@ export type CapabilityWarning = {
 };
 
 export type CapabilityWarningCode =
-  | "dependency-cruiser-target-without-policy"
-  | "dependency-cruiser-policy-without-target"
-  | "github-actions-without-architecture-checks"
-  | "policy-without-stack-implementation";
+  | "dependency-cruiser-implementation-without-target"
+  | "dependency-cruiser-target-without-implementation"
+  | "github-actions-without-architecture-checks";
 
 export function computeCapabilityWarnings(model: EffectiveHarnessModel): CapabilityWarning[] {
   const warnings: CapabilityWarning[] = [];
-  const dependencyCruiserPolicies = model.policies.filter(
-    (policy) => policy.implementation?.[model.stack]?.engine === "dependency-cruiser",
+  const dependencyCruiserImplementations = model.implementations.filter(
+    (implementation) =>
+      implementation.engine === "dependency-cruiser" &&
+      implementation.renderer === "dependency-cruiser-config",
   );
 
-  if (model.targets.dependencyCruiser && dependencyCruiserPolicies.length === 0) {
+  if (model.targets.dependencyCruiser && dependencyCruiserImplementations.length === 0) {
     warnings.push({
-      code: "dependency-cruiser-target-without-policy",
+      code: "dependency-cruiser-target-without-implementation",
       message:
-        "dependency-cruiser target is selected but no policy declares a dependency-cruiser implementation for the selected stack; the generated config will not enforce any rules.",
+        "dependency-cruiser target is selected but no active implementation uses dependency-cruiser; rendering the target will fail until profiles and project.languages line up.",
       target: "dependencyCruiser",
     });
   }
 
-  const enforceablePolicies = dependencyCruiserPolicies.filter(
-    (policy) => policy.severity === "error",
-  );
-  if (enforceablePolicies.length > 0 && !model.targets.dependencyCruiser) {
+  const enforceableImplementations = dependencyCruiserImplementations.filter((implementation) => {
+    const policy = model.policies.find(
+      (candidate) =>
+        candidate.sourceProfile === implementation.policy.profile &&
+        candidate.id === implementation.policy.id,
+    );
+    return policy?.severity === "error";
+  });
+
+  if (enforceableImplementations.length > 0 && !model.targets.dependencyCruiser) {
     warnings.push({
-      code: "dependency-cruiser-policy-without-target",
-      message: `${policyList(enforceablePolicies)} declared an enforceable dependency-cruiser implementation, but the dependency-cruiser target is not selected; the policy will not be enforced automatically.`,
+      code: "dependency-cruiser-implementation-without-target",
+      message: `${implementationList(enforceableImplementations)} declared an enforceable dependency-cruiser implementation, but the dependency-cruiser target is not selected; the policy will not be enforced automatically.`,
     });
   }
 
@@ -47,40 +54,15 @@ export function computeCapabilityWarnings(model: EffectiveHarnessModel): Capabil
     });
   }
 
-  for (const policy of model.policies) {
-    const implementation = policy.implementation;
-    if (implementation === undefined) {
-      continue;
-    }
-
-    if (implementation[model.stack] === undefined) {
-      warnings.push({
-        code: "policy-without-stack-implementation",
-        message: `policy "${policy.id}" has no implementation for the selected stack "${model.stack}"; it cannot be enforced automatically.`,
-      });
-    }
-  }
-
-  // dependency-cruiser implementation contract is currently only available for typescript;
-  // ensure the future readiness contract is not silently broken by selecting an unsupported stack.
-  if (
-    model.targets.dependencyCruiser &&
-    model.stack !== dependencyCruiserPolicyImplementationContract.stack
-  ) {
-    warnings.push({
-      code: "policy-without-stack-implementation",
-      message: `dependency-cruiser target is selected but the dependency-cruiser engine has no contract for the "${model.stack}" stack; only "${dependencyCruiserPolicyImplementationContract.stack}" is supported.`,
-      target: "dependencyCruiser",
-    });
-  }
-
   return warnings;
 }
 
-function policyList(policies: EffectiveHarnessModel["policies"]): string {
-  if (policies.length === 1) {
-    return `policy "${policies[0]?.id ?? ""}"`;
+function implementationList(implementations: EffectiveHarnessModel["implementations"]): string {
+  if (implementations.length === 1) {
+    return `policy "${formatPolicyReference(implementations[0]?.policy ?? { id: "", profile: "" })}"`;
   }
 
-  return `policies ${policies.map((policy) => `"${policy.id}"`).join(", ")}`;
+  return `policies ${implementations
+    .map((implementation) => `"${formatPolicyReference(implementation.policy)}"`)
+    .join(", ")}`;
 }

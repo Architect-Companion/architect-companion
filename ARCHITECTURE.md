@@ -14,7 +14,7 @@ The system has two inputs, one resolved model, and many target outputs.
 ```text
 profiles/<name>/profile.yml            reusable architectural knowledge
 .architect-companion/harness.yml       project-specific harness instance
-.architect-companion/<modules>.yml     project module metadata
+.architect-companion/architecture/boundaries.yml project boundary metadata
             |
             v
   effective harness model              resolved, validated contract
@@ -26,8 +26,8 @@ profiles/<name>/profile.yml            reusable architectural knowledge
 ```
 
 Generated outputs are projections of the effective model. The canonical source
-is the harness instance plus the selected profile; generated files are not a
-second source of truth.
+is the harness instance plus the selected profiles and project boundary
+metadata; generated files are not a second source of truth.
 
 See [`docs/harness-model.md`](docs/harness-model.md) and
 [`docs/effective-harness-model.md`](docs/effective-harness-model.md).
@@ -40,7 +40,7 @@ The implementation is a small TypeScript ESM package organized as follows.
 | ------------ | ------------------- | ----------------------------------------------------------------------------------------- |
 | CLI          | `src/cli.ts`        | Argument parsing, command dispatch, exit codes, error mapping.                            |
 | Init         | `src/init/`         | Scaffold `.architect-companion/`, write the profile lock, invoke render; atomic rollback. |
-| Model        | `src/model/`        | Load, validate, merge profile + harness + module metadata; profile lock.                  |
+| Model        | `src/model/`        | Load, validate, merge profiles + harness + boundary metadata; profile lock.               |
 | Render       | `src/render/`       | Orchestrate selected renderers, enforce generated-file safety.                            |
 | Renderers    | `src/renderers/`    | Target-specific projections (e.g. GitHub Actions workflow).                               |
 | Integrations | `src/integrations/` | External-engine adapters (e.g. dependency-cruiser config + commands).                     |
@@ -59,8 +59,8 @@ entrypoint that wires them together.
 1. Pre-flight: refuse if `.architect-companion/` already exists; refuse if any
    would-be render-target path conflicts with an existing unmarked file.
 2. Write `.architect-companion/harness.yml` and
-   `.architect-companion/architecture/modules.yml` (an empty-but-valid module
-   stub).
+   `.architect-companion/architecture/boundaries.yml` (an empty-but-valid
+   boundary stub).
 3. Resolve the effective model, write `.architect-companion/profile.lock.yml`.
 4. Invoke the render pipeline.
 5. Any failure or SIGINT rolls back every file the command created.
@@ -69,9 +69,9 @@ See [`docs/init.md`](docs/init.md) for the full contract.
 
 `architect-companion inspect effective-model`:
 
-1. Read `harness.yml`, the named profile, and module metadata.
+1. Read `harness.yml`, the selected profiles, and boundary metadata.
 2. Validate each file against its schema (unknown fields are errors).
-3. Merge profile defaults with harness overrides.
+3. Merge the selected profiles with the harness and active implementations.
 4. Print the resolved model as JSON.
 
 `architect-companion render` (and `render --check`):
@@ -85,13 +85,13 @@ See [`docs/init.md`](docs/init.md) for the full contract.
 `architect-companion doctor` reports adoption diagnostics (profile lock status,
 capability warnings for selected-but-unsupported targets, missing tools).
 `architect-companion upgrade-profile` rewrites the profile lock to the
-currently resolved profile.
+currently resolved profiles.
 
 External-engine integration (current: dependency-cruiser):
 
-1. The profile declares an `implementation` block on a policy:
+1. A selected profile declares an implementation that maps a selected policy to
    `{ engine: dependency-cruiser, renderer: dependency-cruiser-config }`.
-2. The integration renders `.dependency-cruiser.cjs` from module metadata and
+2. The integration renders `.dependency-cruiser.cjs` from boundary metadata and
    `allowed_dependencies`.
 3. The check-command layer emits a target-neutral invocation
    (`npx --no-install depcruise --config .dependency-cruiser.cjs <paths>`).
@@ -112,13 +112,13 @@ an ADR.
 - **Deterministic rendering.** No AI in the render path; the same input
   produces the same output. See ADR
   [0002](docs/decisions/0002-deterministic-rendering.md).
-- **Render wires existing tools into CI; engines run themselves.** Profiles
-  declare which existing engine implements a policy for a given stack;
-  rendered CI steps invoke the engine directly, and Architect Companion does
-  not orchestrate or normalize engine output at runtime. See ADR
+- **Render wires existing tools into CI; engines run themselves.** Profiles can
+  declare implementations that map policies to existing engines for active
+  languages; rendered CI steps invoke the engine directly, and Architect
+  Companion does not orchestrate or normalize engine output at runtime. See ADR
   [0003](docs/decisions/0003-checks-orchestrate-existing-tools.md).
-- **Profile lock pins resolved profile content.** A SHA-256 content hash of
-  the resolved profile is recorded in `.architect-companion/profile.lock.yml`;
+- **Profile lock pins resolved profile content.** SHA-256 content hashes for
+  the selected profiles are recorded in `.architect-companion/profile.lock.yml`;
   `render` refuses to run on a stale lock, and `upgrade-profile` is the only
   way to advance it. See ADR
   [0005](docs/decisions/0005-profile-lock-for-adoption.md).
@@ -166,8 +166,8 @@ scripts/         developer tooling not shipped to users
 
 ## Current Scope
 
-The harness covers the TypeScript modular monolith: effective model,
-modular-monolith profile, deterministic render, profile lock, adoption
-diagnostics, dependency-cruiser integration, and a GitHub Actions adapter. A
-dedicated `architect-companion check` command is intentionally out of scope;
-engines report pass/fail through their own CI steps.
+The harness covers composable CLI, TypeScript, and modular-monolith profiles:
+effective model, deterministic render, profile lock, adoption diagnostics,
+dependency-cruiser integration, and a GitHub Actions adapter. A dedicated
+`architect-companion check` command is intentionally out of scope; engines
+report pass/fail through their own CI steps.

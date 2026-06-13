@@ -1,0 +1,33 @@
+schemaVersion: 1
+profile:
+  name: typescript
+  version: 0.1.0
+  title: TypeScript
+  summary: TypeScript-specific guidance and check implementations.
+principles:
+  - id: type-contracts-at-boundaries
+    title: Keep boundary contracts explicit
+    guidance: >-
+      Export stable TypeScript types from public entrypoints and avoid leaking
+      internal framework, ORM, or filesystem details through those types.
+policies: []
+workflows: []
+heuristics: []
+examples: []
+implementations:
+  - id: dependency-cruiser-cli-layer-boundaries
+    policy:
+      profile: cli
+      id: layer-boundaries
+    appliesTo:
+      language: typescript
+    engine: dependency-cruiser
+    renderer: dependency-cruiser-config
+  - id: dependency-cruiser-modular-monolith-module-boundaries
+    policy:
+      profile: modular-monolith
+      id: module-boundaries
+    appliesTo:
+      language: typescript
+    engine: dependency-cruiser
+    renderer: dependency-cruiser-config

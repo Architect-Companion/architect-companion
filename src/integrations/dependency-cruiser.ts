@@ -1,10 +1,9 @@
-import type { EffectiveHarnessModel } from "../model/effective-model.js";
+import { formatPolicyReference, type EffectiveHarnessModel } from "../model/effective-model.js";
 
 export const DEPENDENCY_CRUISER_TARGET_FILE = ".dependency-cruiser.cjs";
 
 const dependencyCruiserEngine = "dependency-cruiser";
 const dependencyCruiserRenderer = "dependency-cruiser-config";
-const moduleBoundariesPolicyId = "module-boundaries";
 
 type DependencyCruiserSeverity = "error" | "info" | "warn";
 type NormalizedViolationSeverity = "advisory" | "error" | "warning";
@@ -37,11 +36,10 @@ export type DependencyCruiserConfig = {
   };
 };
 
-export type DependencyCruiserPolicyImplementationContract = {
+export type DependencyCruiserImplementationContract = {
   engine: typeof dependencyCruiserEngine;
-  policyId: typeof moduleBoundariesPolicyId;
+  language: "typescript";
   renderer: typeof dependencyCruiserRenderer;
-  stack: "typescript";
 };
 
 export type DependencyCruiserCommandMetadata = {
@@ -85,41 +83,48 @@ export class DependencyCruiserIntegrationError extends Error {
   }
 }
 
-export const dependencyCruiserPolicyImplementationContract: DependencyCruiserPolicyImplementationContract =
-  {
-    engine: dependencyCruiserEngine,
-    policyId: moduleBoundariesPolicyId,
-    renderer: dependencyCruiserRenderer,
-    stack: "typescript",
-  };
+export const dependencyCruiserImplementationContract: DependencyCruiserImplementationContract = {
+  engine: dependencyCruiserEngine,
+  language: "typescript",
+  renderer: dependencyCruiserRenderer,
+};
 
 export function createDependencyCruiserConfig(
   model: EffectiveHarnessModel,
 ): DependencyCruiserConfig {
-  const policy = getModuleBoundariesPolicy(model);
-  const modules = [...model.modules].sort((left, right) => left.name.localeCompare(right.name));
+  const implementation = getDependencyCruiserImplementation(model);
+  const policy = getImplementedPolicy(model, implementation);
+  const policyReference = formatPolicyReference(implementation.policy);
+  const boundaries = [...model.boundaries].sort((left, right) =>
+    left.name.localeCompare(right.name),
+  );
   const severity = toDependencyCruiserSeverity(policy.severity);
-  const forbidden = modules.flatMap((sourceModule) => {
-    const allowedDependencies = new Set(model.allowedDependencies[sourceModule.name] ?? []);
+  const forbidden = boundaries.flatMap((sourceBoundary) => {
+    const allowedDependencies = new Set(model.allowedDependencies[sourceBoundary.name] ?? []);
 
-    return modules.flatMap((targetModule): DependencyCruiserForbiddenRule[] => {
-      if (sourceModule.name === targetModule.name) {
+    return boundaries.flatMap((targetBoundary): DependencyCruiserForbiddenRule[] => {
+      if (sourceBoundary.name === targetBoundary.name) {
         return [];
       }
 
-      assertPublicApiWithinModule(targetModule);
+      assertPublicApiWithinBoundary(targetBoundary);
 
-      if (!allowedDependencies.has(targetModule.name)) {
+      if (!allowedDependencies.has(targetBoundary.name)) {
         return [
           {
-            comment: `${sourceModule.name} does not declare ${targetModule.name} as an allowed module dependency.`,
+            comment: `${sourceBoundary.name} does not declare ${targetBoundary.name} as an allowed boundary dependency.`,
             from: {
-              path: modulePathPattern(sourceModule.path),
+              path: boundaryPathPattern(sourceBoundary.path),
             },
-            name: ruleName(sourceModule.name, targetModule.name, "undeclared-dependency"),
+            name: ruleName(
+              policyReference,
+              sourceBoundary.name,
+              targetBoundary.name,
+              "undeclared-dependency",
+            ),
             severity,
             to: {
-              path: modulePathPattern(targetModule.path),
+              path: boundaryPathPattern(targetBoundary.path),
             },
           },
         ];
@@ -127,14 +132,19 @@ export function createDependencyCruiserConfig(
 
       return [
         {
-          comment: `${sourceModule.name} may depend on ${targetModule.name} only through ${targetModule.publicApi}.`,
+          comment: `${sourceBoundary.name} may depend on ${targetBoundary.name} only through ${targetBoundary.publicApi}.`,
           from: {
-            path: modulePathPattern(sourceModule.path),
+            path: boundaryPathPattern(sourceBoundary.path),
           },
-          name: ruleName(sourceModule.name, targetModule.name, "internal-import"),
+          name: ruleName(
+            policyReference,
+            sourceBoundary.name,
+            targetBoundary.name,
+            "internal-import",
+          ),
           severity,
           to: {
-            path: moduleInternalPathPattern(targetModule.path, targetModule.publicApi),
+            path: boundaryInternalPathPattern(targetBoundary.path, targetBoundary.publicApi),
           },
         },
       ];
@@ -170,7 +180,7 @@ export function renderDependencyCruiserConfig(model: EffectiveHarnessModel): str
 export function getDependencyCruiserCommandMetadata(
   model: EffectiveHarnessModel,
 ): DependencyCruiserCommandMetadata {
-  const inputPaths = Array.from(new Set(model.modules.map((module) => module.path))).sort(
+  const inputPaths = Array.from(new Set(model.boundaries.map((boundary) => boundary.path))).sort(
     (left, right) => left.localeCompare(right),
   );
 
@@ -235,19 +245,50 @@ export function mapDependencyCruiserJsonResult(value: unknown): DependencyCruise
   };
 }
 
-function getModuleBoundariesPolicy(
+function getDependencyCruiserImplementation(
   model: EffectiveHarnessModel,
-): EffectiveHarnessModel["policies"][number] {
-  const policy = model.policies.find((candidate) => candidate.id === moduleBoundariesPolicyId);
-  const implementation = policy?.implementation?.[model.stack];
+): EffectiveHarnessModel["implementations"][number] {
+  const implementations = model.implementations.filter(
+    (implementation) =>
+      implementation.engine === dependencyCruiserEngine &&
+      implementation.renderer === dependencyCruiserRenderer,
+  );
 
-  if (
-    policy === undefined ||
-    implementation?.engine !== dependencyCruiserEngine ||
-    implementation.renderer !== dependencyCruiserRenderer
-  ) {
+  if (implementations.length === 0) {
     throw new DependencyCruiserIntegrationError(
-      `The ${moduleBoundariesPolicyId} policy must declare a ${dependencyCruiserEngine} implementation with the ${dependencyCruiserRenderer} renderer for ${model.stack}.`,
+      `The dependency-cruiser target requires an active ${dependencyCruiserRenderer} implementation.`,
+    );
+  }
+
+  if (implementations.length > 1) {
+    throw new DependencyCruiserIntegrationError(
+      `The dependency-cruiser renderer supports exactly one active implementation for now, but found ${implementations.map((implementation) => `"${implementation.sourceProfile}.${implementation.id}"`).join(", ")}.`,
+    );
+  }
+
+  const [implementation] = implementations;
+  if (implementation === undefined) {
+    throw new DependencyCruiserIntegrationError(
+      `The dependency-cruiser target requires an active ${dependencyCruiserRenderer} implementation.`,
+    );
+  }
+
+  return implementation;
+}
+
+function getImplementedPolicy(
+  model: EffectiveHarnessModel,
+  implementation: EffectiveHarnessModel["implementations"][number],
+): EffectiveHarnessModel["policies"][number] {
+  const policy = model.policies.find(
+    (candidate) =>
+      candidate.sourceProfile === implementation.policy.profile &&
+      candidate.id === implementation.policy.id,
+  );
+
+  if (policy === undefined) {
+    throw new DependencyCruiserIntegrationError(
+      `Implementation "${implementation.sourceProfile}.${implementation.id}" references missing policy "${formatPolicyReference(implementation.policy)}".`,
     );
   }
 
@@ -280,27 +321,34 @@ function toNormalizedViolationSeverity(severity: string): NormalizedViolationSev
   }
 }
 
-function assertPublicApiWithinModule(module: EffectiveHarnessModel["modules"][number]): void {
-  if (!module.publicApi.startsWith(`${module.path}/`) && module.publicApi !== module.path) {
+function assertPublicApiWithinBoundary(
+  boundary: EffectiveHarnessModel["boundaries"][number],
+): void {
+  if (!boundary.publicApi.startsWith(`${boundary.path}/`) && boundary.publicApi !== boundary.path) {
     throw new DependencyCruiserIntegrationError(
-      `${module.name} public API "${module.publicApi}" must be inside module path "${module.path}" to generate dependency-cruiser rules.`,
+      `${boundary.name} public API "${boundary.publicApi}" must be inside boundary path "${boundary.path}" to generate dependency-cruiser rules.`,
     );
   }
 }
 
-function modulePathPattern(modulePath: string): string {
-  return `^${escapeRegExp(modulePath)}(?:/|$)`;
+function boundaryPathPattern(boundaryPath: string): string {
+  return `^${escapeRegExp(boundaryPath)}(?:/|$)`;
 }
 
-function moduleInternalPathPattern(modulePath: string, publicApiPath: string): string {
-  if (modulePath === publicApiPath) {
+function boundaryInternalPathPattern(boundaryPath: string, publicApiPath: string): string {
+  if (boundaryPath === publicApiPath) {
     return `^$`;
   }
-  return `^(?!${escapeRegExp(publicApiPath)}$)${escapeRegExp(modulePath)}(?:/|$)`;
+  return `^(?!${escapeRegExp(publicApiPath)}$)${escapeRegExp(boundaryPath)}(?:/|$)`;
 }
 
-function ruleName(sourceModule: string, targetModule: string, ruleKind: string): string {
-  return `architect-companion/${moduleBoundariesPolicyId}/${sourceModule}-to-${targetModule}/${ruleKind}`;
+function ruleName(
+  policyReference: string,
+  sourceBoundary: string,
+  targetBoundary: string,
+  ruleKind: string,
+): string {
+  return `architect-companion/${policyReference}/${sourceBoundary}-to-${targetBoundary}/${ruleKind}`;
 }
 
 function policyIdFromRuleName(ruleNameValue: string): string | undefined {

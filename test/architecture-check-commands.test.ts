@@ -59,14 +59,14 @@ describe("getArchitectureCheckCommands", () => {
       getArchitectureCheckCommands(
         withDependencyCruiserEnabled({
           ...model,
-          modules: model.modules.map((module) =>
-            module.name === "billing"
+          boundaries: model.boundaries.map((boundary) =>
+            boundary.name === "billing"
               ? {
-                  ...module,
+                  ...boundary,
                   path: "src/modules/billing core",
                   publicApi: "src/modules/billing core/index.ts",
                 }
-              : module,
+              : boundary,
           ),
         }),
       )[0]?.run,

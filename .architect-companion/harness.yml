@@ -1,12 +1,16 @@
 schemaVersion: 1
-profile:
-  name: typescript-cli
-  version: 0.1.0
+profiles:
+  - name: cli
+    version: 0.1.0
+  - name: typescript
+    version: 0.1.0
 project:
   name: architect-companion
-modules: architecture/modules.yml
-stack: typescript
+  languages:
+    - typescript
+boundaries: architecture/boundaries.yml
 targets:
+  agentsMd: true
   claudeMd: true
   cursor: true
   dependencyCruiser: true

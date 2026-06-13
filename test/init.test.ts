@@ -56,7 +56,11 @@ describe("architect-companion init", () => {
           "--profiles",
           profilesDir,
           "--profile",
-          "modular-monolith",
+          "cli",
+          "--profile",
+          "typescript",
+          "--language",
+          "typescript",
         ],
         io,
         cliOptions,
@@ -64,16 +68,16 @@ describe("architect-companion init", () => {
 
       expect(exitCode).toBe(0);
       expect(writes.stderr).toBe("");
-      expect(writes.stdout).toContain("Profile: modular-monolith@0.2.0");
-      expect(writes.stdout).toContain("Stack: typescript");
+      expect(writes.stdout).toContain("Profiles: cli@0.1.0, typescript@0.1.0");
+      expect(writes.stdout).toContain("Languages: typescript");
       expect(writes.stdout).toContain("created .architect-companion/harness.yml");
-      expect(writes.stdout).toContain("created .architect-companion/architecture/modules.yml");
+      expect(writes.stdout).toContain("created .architect-companion/architecture/boundaries.yml");
       expect(writes.stdout).toContain("created .architect-companion/profile.lock.yml");
       expect(writes.stdout).toContain("created AGENTS.md");
-      expect(writes.stdout).toContain("Next: declare your modules");
+      expect(writes.stdout).toContain("Next: declare your boundaries");
 
       expect(existsSync(join(projectDir, ".architect-companion/harness.yml"))).toBe(true);
-      expect(existsSync(join(projectDir, ".architect-companion/architecture/modules.yml"))).toBe(
+      expect(existsSync(join(projectDir, ".architect-companion/architecture/boundaries.yml"))).toBe(
         true,
       );
       expect(existsSync(join(projectDir, ".architect-companion/profile.lock.yml"))).toBe(true);
@@ -83,7 +87,7 @@ describe("architect-companion init", () => {
     }
   });
 
-  it("produces the golden harness.yml and modules.yml for the default flag-driven init", async () => {
+  it("produces the golden harness.yml and boundaries.yml for the default flag-driven init", async () => {
     const projectDir = makeTempProject();
 
     try {
@@ -99,7 +103,11 @@ describe("architect-companion init", () => {
           "widgets",
           "--no-render",
           "--profile",
-          "modular-monolith",
+          "cli",
+          "--profile",
+          "typescript",
+          "--language",
+          "typescript",
         ],
         io,
         cliOptions,
@@ -110,8 +118,8 @@ describe("architect-companion init", () => {
         readFileSync(join(goldenInitDir, "harness.yml"), "utf8"),
       );
       expect(
-        readFileSync(join(projectDir, ".architect-companion/architecture/modules.yml"), "utf8"),
-      ).toBe(readFileSync(join(goldenInitDir, "modules.yml"), "utf8"));
+        readFileSync(join(projectDir, ".architect-companion/architecture/boundaries.yml"), "utf8"),
+      ).toBe(readFileSync(join(goldenInitDir, "boundaries.yml"), "utf8"));
     } finally {
       rmSync(projectDir, { force: true, recursive: true });
     }
@@ -131,7 +139,11 @@ describe("architect-companion init", () => {
           "--profiles",
           profilesDir,
           "--profile",
-          "modular-monolith",
+          "cli",
+          "--profile",
+          "typescript",
+          "--language",
+          "typescript",
         ],
         io,
         cliOptions,
@@ -165,7 +177,11 @@ describe("architect-companion init", () => {
           "--profiles",
           profilesDir,
           "--profile",
-          "modular-monolith",
+          "cli",
+          "--profile",
+          "typescript",
+          "--language",
+          "typescript",
         ],
         io,
         cliOptions,
@@ -198,7 +214,11 @@ describe("architect-companion init", () => {
           "--profiles",
           profilesDir,
           "--profile",
-          "modular-monolith",
+          "cli",
+          "--profile",
+          "typescript",
+          "--language",
+          "typescript",
         ],
         io,
         cliOptions,
@@ -232,7 +252,11 @@ describe("architect-companion init", () => {
           "cursor",
           "--dry-run",
           "--profile",
-          "modular-monolith",
+          "cli",
+          "--profile",
+          "typescript",
+          "--language",
+          "typescript",
         ],
         io,
         cliOptions,
@@ -241,7 +265,9 @@ describe("architect-companion init", () => {
       expect(exitCode).toBe(0);
       expect(writes.stdout).toContain("Pre-flight: OK");
       expect(writes.stdout).toContain("Would create .architect-companion/harness.yml");
-      expect(writes.stdout).toContain("Would create .architect-companion/architecture/modules.yml");
+      expect(writes.stdout).toContain(
+        "Would create .architect-companion/architecture/boundaries.yml",
+      );
       expect(writes.stdout).toContain("Would run render, producing:");
       expect(writes.stdout).toContain("AGENTS.md");
       expect(writes.stdout).toContain(".cursor/rules/architect-companion.mdc");
@@ -267,7 +293,11 @@ describe("architect-companion init", () => {
           profilesDir,
           "--no-render",
           "--profile",
-          "modular-monolith",
+          "cli",
+          "--profile",
+          "typescript",
+          "--language",
+          "typescript",
         ],
         io,
         cliOptions,
@@ -298,7 +328,11 @@ describe("architect-companion init", () => {
           "--target",
           "cursor",
           "--profile",
-          "modular-monolith",
+          "cli",
+          "--profile",
+          "typescript",
+          "--language",
+          "typescript",
         ],
         io,
         cliOptions,
@@ -312,7 +346,7 @@ describe("architect-companion init", () => {
     }
   });
 
-  it("--no-target agentsMd disables the profile default", async () => {
+  it("--no-target agentsMd disables the init default", async () => {
     const projectDir = makeTempProject();
 
     try {
@@ -327,7 +361,11 @@ describe("architect-companion init", () => {
           "--no-target",
           "agentsMd",
           "--profile",
-          "modular-monolith",
+          "cli",
+          "--profile",
+          "typescript",
+          "--language",
+          "typescript",
         ],
         io,
         cliOptions,
@@ -336,7 +374,7 @@ describe("architect-companion init", () => {
       expect(exitCode).toBe(0);
       expect(existsSync(join(projectDir, "AGENTS.md"))).toBe(false);
       expect(readFileSync(join(projectDir, ".architect-companion/harness.yml"), "utf8")).toContain(
-        "agentsMd: false",
+        "targets: {}\n",
       );
     } finally {
       rmSync(projectDir, { force: true, recursive: true });
@@ -358,7 +396,11 @@ describe("architect-companion init", () => {
           "--target",
           "claudeCode",
           "--profile",
-          "modular-monolith",
+          "cli",
+          "--profile",
+          "typescript",
+          "--language",
+          "typescript",
         ],
         io,
         cliOptions,
@@ -373,7 +415,7 @@ describe("architect-companion init", () => {
     }
   });
 
-  it("rejects --stack with an unsupported value", async () => {
+  it("rejects the removed --stack option", async () => {
     const projectDir = makeTempProject();
 
     try {
@@ -388,14 +430,18 @@ describe("architect-companion init", () => {
           "--stack",
           "java",
           "--profile",
-          "modular-monolith",
+          "cli",
+          "--profile",
+          "typescript",
+          "--language",
+          "typescript",
         ],
         io,
         cliOptions,
       );
 
       expect(exitCode).toBe(1);
-      expect(writes.stderr).toContain("--stack must be one of");
+      expect(writes.stderr).toContain("Unknown argument: --stack");
       expect(existsSync(join(projectDir, ".architect-companion"))).toBe(false);
     } finally {
       rmSync(projectDir, { force: true, recursive: true });
@@ -419,7 +465,11 @@ describe("architect-companion init", () => {
           "--no-target",
           "cursor",
           "--profile",
-          "modular-monolith",
+          "cli",
+          "--profile",
+          "typescript",
+          "--language",
+          "typescript",
         ],
         io,
         cliOptions,
@@ -447,6 +497,8 @@ describe("architect-companion init", () => {
           profilesDir,
           "--profile",
           "service-oriented",
+          "--language",
+          "typescript",
         ],
         io,
         cliOptions,
@@ -476,7 +528,11 @@ describe("architect-companion init", () => {
           "custom-name",
           "--no-render",
           "--profile",
-          "modular-monolith",
+          "cli",
+          "--profile",
+          "typescript",
+          "--language",
+          "typescript",
         ],
         io,
         cliOptions,
@@ -529,7 +585,11 @@ describe("architect-companion init", () => {
           "--profiles",
           profilesDir,
           "--profile",
-          "modular-monolith",
+          "cli",
+          "--profile",
+          "typescript",
+          "--language",
+          "typescript",
         ],
         io,
         cliOptions,
@@ -565,7 +625,11 @@ describe("architect-companion init", () => {
           "--profiles",
           profilesDir,
           "--profile",
-          "modular-monolith",
+          "cli",
+          "--profile",
+          "typescript",
+          "--language",
+          "typescript",
         ],
         io,
         cliOptions,
@@ -603,7 +667,11 @@ describe("architect-companion init", () => {
           "--target",
           "cursor",
           "--profile",
-          "modular-monolith",
+          "cli",
+          "--profile",
+          "typescript",
+          "--language",
+          "typescript",
         ],
         io,
         cliOptions,
