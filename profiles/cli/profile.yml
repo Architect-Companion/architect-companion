@@ -1,17 +1,9 @@
 schemaVersion: 1
 profile:
-  name: typescript-cli
+  name: cli
   version: 0.1.0
-  title: TypeScript CLI
-  summary: Opinionated guidance for building layered, maintainable TypeScript command-line applications.
-defaults:
-  stack: typescript
-  targets:
-    agentsMd: true
-    claudeMd: false
-    cursor: false
-    dependencyCruiser: false
-    githubActions: false
+  title: CLI
+  summary: Opinionated guidance for building layered, maintainable command-line applications.
 principles:
   - id: logic-separated-from-io
     title: Separate pure business logic from side-effects
@@ -48,18 +40,14 @@ policies:
       Direct usage of `node:fs`, `node:child_process`, or network clients must be confined to
       dedicated I/O modules or adapters. Core logic must rely on abstractions or injected functions
       to interact with the outside world.
-  - id: module-boundaries
+  - id: layer-boundaries
     title: Layer boundaries
     intent: Inner layers do not depend on outer layers.
     severity: error
     guidance: >-
       Core business logic modules must not import from the CLI argument parser, standard output
-      formatters, or concrete I/O implementations. Cross-layer imports must be declared in
+      formatters, or concrete I/O implementations. Cross-boundary imports must be declared in
       allowed_dependencies to ensure the dependency graph flows in one direction.
-    implementation:
-      typescript:
-        engine: dependency-cruiser
-        renderer: dependency-cruiser-config
 workflows:
   - id: add-command
     title: Add a new command

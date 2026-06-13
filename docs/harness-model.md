@@ -77,7 +77,8 @@ The exact schema is still open, but the responsibility split should stay stable:
 - `workflows/` describes how agents and developers should approach common tasks.
 - `policies/` describes checks and enforcement rules.
 - `targets/` configures how the canonical model is rendered for specific tools.
-- `harness.yml` ties the project profile together.
+- `harness.yml` selects the project profiles, active languages, boundary
+  metadata, and render targets.
 
 Reusable architectural knowledge, such as the defaults for a good modular monolith, should be packaged as profiles. See [Profile Model](profile-model.md).
 
@@ -118,7 +119,7 @@ architect-companion explain
 
 Possible meanings:
 
-- `init`: scaffold `.architect-companion/` from a selected profile and render the enabled targets in a single atomic transaction. See [Init Command](init.md).
+- `init`: scaffold `.architect-companion/` from selected profiles and render the enabled targets in a single atomic transaction. See [Init Command](init.md).
 - `render`: generate target-specific files from the effective harness model.
 - `render --check`: fail when generated targets would change, without writing anything.
 - `review`: review a diff against the harness model.
@@ -143,12 +144,12 @@ A typical setup flow is:
 architect-companion init
 ```
 
-`init` resolves the profile, stack, project name, and target selections —
-either from flags, from an interactive wizard when stdin is a TTY, or from
-sensible defaults — pre-flights the working tree for conflicts, then
-scaffolds `.architect-companion/` and renders the enabled targets in one
-atomic step. See [Init Command](init.md) for the full contract, flag surface,
-and failure modes.
+`init` resolves the profiles, project languages, project name, and target
+selections — either from flags, from an interactive wizard when stdin is a TTY,
+or from sensible defaults — pre-flights the working tree for conflicts, then
+scaffolds `.architect-companion/` and renders the enabled targets in one atomic
+step. See [Init Command](init.md) for the full contract, flag surface, and
+failure modes.
 
 After init, the user keeps working with their preferred tools:
 

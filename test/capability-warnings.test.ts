@@ -18,7 +18,7 @@ describe("computeCapabilityWarnings", () => {
     const warnings = computeCapabilityWarnings(model);
 
     expect(warnings.map((warning) => warning.code)).toContain(
-      "dependency-cruiser-policy-without-target",
+      "dependency-cruiser-implementation-without-target",
     );
   });
 
@@ -46,12 +46,12 @@ describe("computeCapabilityWarnings", () => {
 
     const warnings = computeCapabilityWarnings({
       ...model,
-      policies: [],
+      implementations: [],
       targets: { ...model.targets, dependencyCruiser: true },
     });
 
     expect(warnings.map((warning) => warning.code)).toContain(
-      "dependency-cruiser-target-without-policy",
+      "dependency-cruiser-target-without-implementation",
     );
   });
 

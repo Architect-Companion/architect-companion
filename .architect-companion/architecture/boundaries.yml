@@ -1,5 +1,5 @@
 schemaVersion: 1
-modules:
+boundaries:
   - name: cli
     path: "src/cli.ts"
     public_api: "src/cli.ts"

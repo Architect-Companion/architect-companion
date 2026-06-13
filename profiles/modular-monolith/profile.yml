@@ -3,15 +3,7 @@ profile:
   name: modular-monolith
   version: 0.2.0
   title: Modular Monolith
-  summary: Opinionated guidance for backend TypeScript modular monoliths.
-defaults:
-  stack: typescript
-  targets:
-    agentsMd: true
-    claudeMd: false
-    cursor: false
-    dependencyCruiser: false
-    githubActions: false
+  summary: Opinionated guidance for backend modular monoliths.
 principles:
   - id: business-capability-modules
     title: Modules represent business capabilities
@@ -90,10 +82,6 @@ policies:
       another module's internal files, or from undeclared module dependencies,
       are boundary violations unless the dependency is redesigned or a
       documented exception is introduced.
-    implementation:
-      typescript:
-        engine: dependency-cruiser
-        renderer: dependency-cruiser-config
   - id: public-api-contracts
     title: Public API contracts
     intent: Modules expose a small stable facade and keep implementation details private.
@@ -143,7 +131,7 @@ workflows:
     steps:
       - Identify the modules affected by the proposed boundary change.
       - Decide whether the change needs a public API, an event, a read model, or a redesigned ownership boundary.
-      - Update module metadata and allowed_dependencies before changing consumers.
+      - Update boundary metadata and allowed_dependencies before changing consumers.
       - Update the public API before changing consumers.
       - Keep transaction and data ownership inside the owning module while moving behavior.
       - Add or update module tests and cross-module contract tests.

@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEPENDENCY_CRUISER_TARGET_FILE,
   createDependencyCruiserConfig,
-  dependencyCruiserPolicyImplementationContract,
+  dependencyCruiserImplementationContract,
   getDependencyCruiserCommandMetadata,
   mapDependencyCruiserJsonResult,
   renderDependencyCruiserConfig,
@@ -27,15 +27,14 @@ const depcruiseBin = fileURLToPath(
 
 describe("dependency-cruiser integration", () => {
   it("declares the policy implementation contract", () => {
-    expect(dependencyCruiserPolicyImplementationContract).toEqual({
+    expect(dependencyCruiserImplementationContract).toEqual({
       engine: "dependency-cruiser",
-      policyId: "module-boundaries",
+      language: "typescript",
       renderer: "dependency-cruiser-config",
-      stack: "typescript",
     });
   });
 
-  it("creates dependency-cruiser rules from module metadata", async () => {
+  it("creates dependency-cruiser rules from boundary metadata", async () => {
     const model = await loadEffectiveHarnessModel({
       profilesDir,
       projectDir: sampleProjectDir,
@@ -49,18 +48,18 @@ describe("dependency-cruiser integration", () => {
         from: {
           path: "^src/modules/billing(?:/|$)",
         },
-        name: "architect-companion/module-boundaries/billing-to-identity/internal-import",
+        name: "architect-companion/modular-monolith.module-boundaries/billing-to-identity/internal-import",
         severity: "error",
         to: {
           path: "^(?!src/modules/identity/index\\.ts$)src/modules/identity(?:/|$)",
         },
       },
       {
-        comment: "identity does not declare billing as an allowed module dependency.",
+        comment: "identity does not declare billing as an allowed boundary dependency.",
         from: {
           path: "^src/modules/identity(?:/|$)",
         },
-        name: "architect-companion/module-boundaries/identity-to-billing/undeclared-dependency",
+        name: "architect-companion/modular-monolith.module-boundaries/identity-to-billing/undeclared-dependency",
         severity: "error",
         to: {
           path: "^src/modules/billing(?:/|$)",
@@ -90,7 +89,7 @@ describe("dependency-cruiser integration", () => {
     expect(source).toContain("/** @type {import('dependency-cruiser').IConfiguration} */");
     expect(source).toContain("module.exports = ");
     expect(source).toContain(
-      '"architect-companion/module-boundaries/billing-to-identity/internal-import"',
+      '"architect-companion/modular-monolith.module-boundaries/billing-to-identity/internal-import"',
     );
   });
 
@@ -129,7 +128,7 @@ describe("dependency-cruiser integration", () => {
             from: "src/modules/billing/service.ts",
             rule: {
               comment: "billing may depend on identity only through src/modules/identity/index.ts.",
-              name: "architect-companion/module-boundaries/billing-to-identity/internal-import",
+              name: "architect-companion/modular-monolith.module-boundaries/billing-to-identity/internal-import",
               severity: "error",
             },
             to: "src/modules/identity/internal/customer-repository.ts",
@@ -153,9 +152,10 @@ describe("dependency-cruiser integration", () => {
           engine: "dependency-cruiser",
           from: "src/modules/billing/service.ts",
           message: "billing may depend on identity only through src/modules/identity/index.ts.",
-          policyId: "module-boundaries",
+          policyId: "modular-monolith.module-boundaries",
           rawSeverity: "error",
-          ruleName: "architect-companion/module-boundaries/billing-to-identity/internal-import",
+          ruleName:
+            "architect-companion/modular-monolith.module-boundaries/billing-to-identity/internal-import",
           severity: "error",
           to: "src/modules/identity/internal/customer-repository.ts",
         },
@@ -173,7 +173,7 @@ describe("dependency-cruiser integration", () => {
             {
               from: "src/modules/billing/service.ts",
               rule: {
-                name: "architect-companion/module-boundaries/billing-to-identity/internal-import",
+                name: "architect-companion/modular-monolith.module-boundaries/billing-to-identity/internal-import",
                 severity: "warn",
               },
               to: "src/modules/identity/internal/customer-repository.ts",
@@ -227,8 +227,9 @@ export function invoiceCustomer(customerId: string): string {
         expect.arrayContaining([
           expect.objectContaining({
             from: "src/modules/billing/service.ts",
-            policyId: "module-boundaries",
-            ruleName: "architect-companion/module-boundaries/billing-to-identity/internal-import",
+            policyId: "modular-monolith.module-boundaries",
+            ruleName:
+              "architect-companion/modular-monolith.module-boundaries/billing-to-identity/internal-import",
             severity: "error",
             to: "src/modules/identity/internal/customer-repository.ts",
           }),

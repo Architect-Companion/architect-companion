@@ -1,5 +1,5 @@
 import {
-  dependencyCruiserPolicyImplementationContract,
+  dependencyCruiserImplementationContract,
   getDependencyCruiserCommandMetadata,
 } from "../integrations/dependency-cruiser.js";
 import type { EffectiveHarnessModel } from "../model/effective-model.js";
@@ -32,13 +32,11 @@ function getDependencyCruiserCheckCommand(
 ): ArchitectureCheckCommand | undefined {
   const shouldRunDependencyCruiser =
     model.targets.dependencyCruiser &&
-    model.policies.some((policy) => {
-      const implementation = policy.implementation?.[model.stack];
+    model.implementations.some((implementation) => {
       return (
-        model.stack === dependencyCruiserPolicyImplementationContract.stack &&
-        policy.id === dependencyCruiserPolicyImplementationContract.policyId &&
-        implementation?.engine === dependencyCruiserPolicyImplementationContract.engine &&
-        implementation.renderer === dependencyCruiserPolicyImplementationContract.renderer
+        implementation.appliesTo.language === dependencyCruiserImplementationContract.language &&
+        implementation.engine === dependencyCruiserImplementationContract.engine &&
+        implementation.renderer === dependencyCruiserImplementationContract.renderer
       );
     });
 

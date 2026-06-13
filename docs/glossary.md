@@ -6,7 +6,8 @@ The product and toolchain for defining, rendering, and checking an opinionated a
 
 ## Harness
 
-The repository-local architecture guidance, workflows, policies, and target configuration used to guide developers, agents, and CI systems.
+The repository-local selection of profiles, project context, boundary facts,
+and target configuration used to guide developers, agents, and CI systems.
 
 ## Canonical Harness
 
@@ -14,15 +15,29 @@ The tool-independent source of truth for a specific repository, usually represen
 
 ## Profile
 
-A reusable, versioned package of architectural knowledge for a recurring system shape, such as a modular monolith, service-oriented backend, frontend application, or legacy modernization effort.
+A reusable, versioned package that can contribute architectural guidance,
+workflows, examples, and policy implementations. Profiles are composable:
+a repository may select `cli` and `typescript`, or `modular-monolith` and
+`typescript`, without needing a combined profile for every pairing.
 
 ## Profile Library
 
-The collection of reusable profiles shipped by Architect Companion, for example `profiles/modular-monolith/`.
+The collection of reusable profiles shipped by Architect Companion, for
+example `profiles/cli/`, `profiles/modular-monolith/`, and
+`profiles/typescript/`.
 
 ## Effective Harness Model
 
-The fully resolved model produced by combining profile defaults, project-specific harness configuration, local architecture facts, overrides, and target options.
+The fully resolved model produced by combining selected profiles,
+project-specific harness configuration, boundary facts, active policy
+implementations, and target options.
+
+## Boundary
+
+A named project area with a path and public API entrypoint. A boundary may be
+a business module, CLI layer, package, service, adapter, or other architectural
+unit. Boundary dependencies are declared in
+`.architect-companion/architecture/boundaries.yml`.
 
 ## Renderer
 
@@ -56,10 +71,19 @@ An architectural rule, expectation, or constraint that may be advisory or enforc
 
 Examples:
 
-- modules may only depend on another module's public API
+- boundaries may only depend on another boundary's public API
 - public API changes require contract tests
 - external dependencies require justification
 - expired exceptions must fail CI
+
+## Policy Implementation
+
+Metadata contributed by a selected profile that maps a policy to an engine and
+renderer when the project context applies.
+
+Example: the `typescript` profile can implement
+`modular-monolith.module-boundaries` with `dependency-cruiser` when
+`project.languages` includes `typescript`.
 
 ## Workflow
 
@@ -82,7 +106,7 @@ A deterministic verification step that can pass or fail repeatably.
 
 The harness-owned check is `architect-companion render --check`, which
 verifies that generated projections are fresh and that the profile lock
-matches the resolved profile. External analysis engines run as their own CI
+matches the resolved profiles. External analysis engines run as their own CI
 steps and report their own pass/fail.
 
 ## Architecture Check Command
@@ -150,9 +174,10 @@ Architectural taste is encoded in profiles, policies, workflows, heuristics, exa
 
 ## Profile Lock
 
-`.architect-companion/profile.lock.yml` records the resolved profile name,
-version, and a SHA-256 hash of the profile content. Architect Companion uses the
-lock to detect profile drift and to make profile upgrades explicit.
+`.architect-companion/profile.lock.yml` records the selected profiles in
+harness order, including each profile name, version, and SHA-256 content hash.
+Architect Companion uses the lock to detect profile drift and to make profile
+upgrades explicit.
 
 ## Capability Warning
 

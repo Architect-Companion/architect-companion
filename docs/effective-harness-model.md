@@ -1,8 +1,10 @@
 # Effective Harness Model
 
-The effective harness model is the resolved, validated contract consumed by future renderers and checks.
+The effective harness model is the resolved, validated contract consumed by
+renderers and checks.
 
-The current model resolves a reusable profile, a project harness file, and project module metadata.
+The current model resolves selected profiles, a project harness file, and
+project boundary metadata.
 
 ## Inputs
 
@@ -11,93 +13,112 @@ Profiles live under `profiles/<profile-name>/profile.yml`:
 ```yaml
 schemaVersion: 1
 profile:
-  name: modular-monolith
-  version: 0.2.0
-defaults:
-  stack: typescript
-  targets:
-    agentsMd: true
-    claudeMd: false
+  name: cli
+  version: 0.1.0
 principles:
-  - id: module-ownership
-    title: Modules own behavior behind public APIs
-    guidance: Treat each module as the owner of its behavior and invariants.
+  - id: cli-as-adapter
+    title: Treat the CLI layer as a thin adapter
+    guidance: The CLI parses inputs, wires dependencies, and invokes core logic.
 policies:
-  - id: module-boundaries
-    title: Module boundaries
-    intent: Modules may import another module only when declared in allowed_dependencies and through that module's public API.
+  - id: layer-boundaries
+    title: Layer boundaries
+    intent: Inner layers do not depend on outer layers.
     severity: error
-    guidance: Cross-module imports must be declared in allowed_dependencies and target the dependency module public API.
-    implementation:
-      typescript:
-        engine: dependency-cruiser
-        renderer: dependency-cruiser-config
-workflows:
-  - id: change-module-boundary
-    title: Change a module boundary
-    steps:
-      - Identify the affected modules.
-      - Update public APIs before changing consumers.
-heuristics:
-  - id: architecture-review
-    title: Architecture review
-    questions:
-      - Does every cross-module call use the target module public API?
-examples:
-  - id: module-access
-    title: Module access
-    good: import { findCustomer } from "../identity";
-    bad: import { loadCustomerRow } from "../identity/internal/customer-repository";
+    guidance: Core logic must not import CLI adapters or concrete I/O implementations.
+workflows: []
+heuristics: []
+examples: []
+```
+
+Profiles may also contribute implementations:
+
+```yaml
+schemaVersion: 1
+profile:
+  name: typescript
+  version: 0.1.0
+principles: []
+policies: []
+workflows: []
+heuristics: []
+examples: []
+implementations:
+  - id: dependency-cruiser-cli-layer-boundaries
+    policy:
+      profile: cli
+      id: layer-boundaries
+    appliesTo:
+      language: typescript
+    engine: dependency-cruiser
+    renderer: dependency-cruiser-config
 ```
 
 Project harness configuration lives at `.architect-companion/harness.yml`:
 
 ```yaml
 schemaVersion: 1
-profile:
-  name: modular-monolith
-  version: 0.2.0
+profiles:
+  - name: cli
+    version: 0.1.0
+  - name: typescript
+    version: 0.1.0
 project:
-  name: example-app
-modules: architecture/modules.yml
+  name: architect-companion
+  languages:
+    - typescript
+boundaries: architecture/boundaries.yml
 targets:
-  claudeMd: false
-  cursor: false
+  agentsMd: true
+  dependencyCruiser: true
 ```
 
-Project module metadata lives at the path named by `modules`, relative to `.architect-companion/`:
+Project boundary metadata lives at the path named by `boundaries`, relative to
+`.architect-companion/`:
 
 ```yaml
 schemaVersion: 1
-modules:
-  - name: billing
-    path: src/modules/billing
-    public_api: src/modules/billing/index.ts
+boundaries:
+  - name: cli
+    path: src/cli.ts
+    public_api: src/cli.ts
+  - name: model
+    path: src/model
+    public_api: src/model
 allowed_dependencies:
-  billing:
-    - identity
+  cli:
+    - model
 ```
 
 ## Merge Rules
 
-- The harness-selected profile name and version must match the loaded profile exactly.
-- Harness `stack` overrides the profile default; a stack is required after merging.
-- Harness targets override profile targets key by key.
-- Known targets omitted from both inputs default to `false`.
-- Profile principles, policies, workflows, heuristics, and examples are profile-owned.
-- Module metadata is project-owned and does not merge with profile data in the current implementation.
+- Harness-selected profile names and versions must match loaded profiles
+  exactly.
+- Profile order is preserved from the harness.
+- Profile guidance sections merge by harness profile order, then local item
+  ID.
+- Item IDs are local to a profile; source profile is part of the effective
+  identity.
+- Harness `project.languages` activates matching implementations.
+- Harness `targets` are the only source of target selection.
+- Boundary metadata is project-owned and does not merge with profile data.
 
-## Profile Guidance Sections
+## Implementations
 
-Structured profile guidance is part of the effective model:
+The effective model exposes only active implementations. An implementation is
+active when its source profile is selected, its referenced policy profile is
+selected, its `appliesTo.language` is present in `project.languages`, and the
+referenced policy exists.
 
-- `principles` are renderable architectural guidance.
-- `policies` are architectural expectations. Policies may include implementation metadata for a supported stack and engine.
-- `workflows` are repeatable steps for recurring architecture changes.
-- `heuristics` are review questions for judgment that is not deterministic enough to enforce directly.
-- `examples` provide compact good and bad examples for renderer output.
+Unknown engines or renderers fail profile validation immediately. The current
+supported implementation contract is:
 
-Only policies are candidates for future executable checks. The other sections are codified as deterministic, renderable guidance.
+```yaml
+engine: dependency-cruiser
+renderer: dependency-cruiser-config
+```
+
+The dependency-cruiser renderer currently supports one active implementation
+per render and uses the project boundary metadata to produce dependency rules.
 
 ## Validation Rules
 
@@ -106,16 +127,16 @@ Only policies are candidates for future executable checks. The other sections ar
 - Names use lowercase letters, numbers, and hyphens, starting with a letter.
 - Profile versions use a semantic-version-like shape.
 - Paths are project-relative POSIX paths and may not escape the project.
-- Profile guidance entries must use unique lowercase identifier `id` values and are sorted by `id`.
+- Profile guidance entries must use unique local `id` values and are sorted by
+  `id` within each profile.
 - Policy severities must be `advisory`, `warning`, or `error`.
-- Policy implementation metadata supports `typescript` with `dependency-cruiser` and `dependency-cruiser-config`.
-- Module names must be unique.
-- `allowed_dependencies` keys and values must reference known modules.
-- `allowed_dependencies` is interpreted as a strict module dependency allowlist for executable module-boundary checks.
+- Boundary names must be unique.
+- `allowed_dependencies` keys and values must reference known boundaries.
 
 ## Inspect Command
 
-Use `inspect effective-model` to validate inputs and print the normalized model:
+Use `inspect effective-model` to validate inputs and print the normalized
+model:
 
 ```bash
 architect-companion inspect effective-model
@@ -127,25 +148,29 @@ Useful options:
 architect-companion inspect effective-model --project ./example --profiles ./profiles
 ```
 
-The command is read-only. It does not render generated projections or run architecture checks.
+The command is read-only. It does not render generated projections or run
+architecture checks.
 
 ## Profile Lock
 
-After the first successful `render`, the effective profile is pinned in
+After the first successful `render`, the selected profiles are pinned in
 `.architect-companion/profile.lock.yml`:
 
 ```yaml
 schemaVersion: 1
-profile:
-  name: modular-monolith
-  version: 0.2.0
-  contentHash: sha256-<hex digest of profile.yml bytes>
+profiles:
+  - name: cli
+    version: 0.1.0
+    contentHash: sha256-<hex digest of profile.yml bytes>
+  - name: typescript
+    version: 0.1.0
+    contentHash: sha256-<hex digest of profile.yml bytes>
 ```
 
 `render` and `render --check` verify this lock against the currently resolved
-profile. A name, version, or content-hash mismatch fails with an upgrade hint.
-`architect-companion upgrade-profile` rewrites the lock once the profile change
-has been reviewed.
+profile sequence. A name, order, version, or content-hash mismatch fails with
+an upgrade hint. `architect-companion upgrade-profile` rewrites the lock once
+the profile changes have been reviewed.
 
 See [Decision 0005](decisions/0005-profile-lock-for-adoption.md) for the
 rationale.

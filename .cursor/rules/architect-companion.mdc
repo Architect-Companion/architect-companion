@@ -7,18 +7,24 @@ alwaysApply: true
 # Architect Companion Guidance
 
 Project: architect-companion
-Profile: TypeScript CLI (typescript-cli 0.1.0)
-Stack: typescript
+Profiles:
+- CLI (cli 0.1.0)
+- TypeScript (typescript 0.1.0)
+
+Languages: typescript
 
 ## Principles
 
-- Treat the CLI layer as a thin adapter: The CLI layer (argument parsing, stdin/stdout, exit codes) is an external interface, not the application itself. It should parse inputs, construct dependencies, and invoke core logic without implementing business rules directly.
-- Separate pure business logic from side-effects: Core application logic should be isolated from filesystem, network, and system side-effects. This ensures that the domain logic remains testable, deterministic, and easy to reason about without requiring heavy mocking of external systems.
-- Dependencies flow strictly inward: A well-structured CLI follows a layered architecture (e.g., CLI -> Core <- Adapters/IO). Inner layers (Core) must never import from outer layers (CLI, Adapters). Communication from inner to outer layers should happen via dependency injection or returned results.
+- Treat the CLI layer as a thin adapter (cli): The CLI layer (argument parsing, stdin/stdout, exit codes) is an external interface, not the application itself. It should parse inputs, construct dependencies, and invoke core logic without implementing business rules directly.
+- Separate pure business logic from side-effects (cli): Core application logic should be isolated from filesystem, network, and system side-effects. This ensures that the domain logic remains testable, deterministic, and easy to reason about without requiring heavy mocking of external systems.
+- Dependencies flow strictly inward (cli): A well-structured CLI follows a layered architecture (e.g., CLI -> Core <- Adapters/IO). Inner layers (Core) must never import from outer layers (CLI, Adapters). Communication from inner to outer layers should happen via dependency injection or returned results.
+- Keep boundary contracts explicit (typescript): Export stable TypeScript types from public entrypoints and avoid leaking internal framework, ORM, or filesystem details through those types.
 
 ## Policies
 
 ### CLI entrypoint responsibility
+
+Source: cli
 
 Severity: error
 
@@ -28,6 +34,8 @@ The CLI layer must not contain business logic, file parsing, or complex data tra
 
 ### I/O isolation
 
+Source: cli
+
 Severity: error
 
 Intent: Filesystem and network operations are isolated in dedicated modules.
@@ -36,13 +44,15 @@ Direct usage of `node:fs`, `node:child_process`, or network clients must be conf
 
 ### Layer boundaries
 
+Source: cli
+
 Severity: error
 
 Intent: Inner layers do not depend on outer layers.
 
-Core business logic modules must not import from the CLI argument parser, standard output formatters, or concrete I/O implementations. Cross-layer imports must be declared in allowed_dependencies to ensure the dependency graph flows in one direction.
+Core business logic modules must not import from the CLI argument parser, standard output formatters, or concrete I/O implementations. Cross-boundary imports must be declared in allowed_dependencies to ensure the dependency graph flows in one direction.
 
-## Modules
+## Boundaries
 
 - checks: src/checks
   Public API: src/checks
@@ -79,6 +89,8 @@ Core business logic modules must not import from the CLI argument parser, standa
 
 ### Add a new command
 
+Source: cli
+
 1. Define the core use case or operation independent of the CLI.
 2. Implement the core logic and test it using in-memory or mock data.
 3. Add the command definition to the CLI argument parser.
@@ -86,6 +98,8 @@ Core business logic modules must not import from the CLI argument parser, standa
 5. Render and run architecture checks before review.
 
 ### Integrate an external tool or API
+
+Source: cli
 
 1. Define an interface or signature in the core layer describing what is needed from the tool.
 2. Implement an adapter that interacts with the tool (e.g., via child_process or HTTP).
@@ -95,11 +109,15 @@ Core business logic modules must not import from the CLI argument parser, standa
 
 ### Error handling review
 
+Source: cli
+
 - Are internal errors properly caught and translated into user-friendly CLI messages?
 - Does the CLI return the correct non-zero exit codes on failure?
 - Is sensitive information stripped from terminal error output?
 
 ### Testability review
+
+Source: cli
 
 - Can the core logic be tested without mocking the file system, network, or process globals?
 - Are unit tests fast and deterministic?
@@ -107,6 +125,8 @@ Core business logic modules must not import from the CLI argument parser, standa
 ## Examples
 
 ### CLI logic separation
+
+Source: cli
 
 Good:
 
@@ -132,6 +152,8 @@ if (parsed.force && parsed.clean) {
 ```
 
 ### I/O isolation
+
+Source: cli
 
 Good:
 

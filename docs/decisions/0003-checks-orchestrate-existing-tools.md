@@ -14,7 +14,7 @@ Examples include ArchUnit, dependency-cruiser, Semgrep, ESLint, Checkstyle, and 
 
 Architect Companion should not become a custom universal static analyzer.
 
-For code analysis, profiles declare which existing engines implement a policy for a given stack. Architect Companion renders the corresponding tool configuration and renders CI workflow steps that invoke the tool directly.
+For code analysis, profiles declare implementations that map policies to existing engines for active project languages. Architect Companion renders the corresponding tool configuration and renders CI workflow steps that invoke the tool directly.
 
 The deterministic enforcement chain is:
 

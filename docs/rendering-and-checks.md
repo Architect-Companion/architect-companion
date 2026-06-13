@@ -32,7 +32,7 @@ The generated output should be reproducible for the same input.
 
 The harness is meant to constrain and guide agentic development. If the harness itself were translated non-deterministically, the project would need another evaluation layer to verify the generated guidance.
 
-That would create a fragile stack:
+That would create a fragile chain:
 
 ```text
 canonical harness
@@ -155,12 +155,12 @@ analysis tool. It should consume generic architecture check commands and render
 them as workflow steps. Tool-specific integrations own how their command is
 constructed.
 
-For the TypeScript modular monolith slice, the selected external engine is
-dependency-cruiser. When the dependency-cruiser policy implementation and target
+For the current TypeScript slice, the selected external engine is
+dependency-cruiser. When a dependency-cruiser policy implementation and target
 are both selected, the workflow invokes the project-local binary with:
 
 ```bash
-npx --no-install depcruise --config .dependency-cruiser.cjs <module paths>
+npx --no-install depcruise --config .dependency-cruiser.cjs <boundary paths>
 ```
 
 Local behavior should mirror CI behavior:
@@ -168,7 +168,7 @@ Local behavior should mirror CI behavior:
 ```bash
 npm ci
 npx --no-install architect-companion render --check
-npx --no-install depcruise --config .dependency-cruiser.cjs <module paths>
+npx --no-install depcruise --config .dependency-cruiser.cjs <boundary paths>
 ```
 
 The workflow assumes `architect-companion` and `dependency-cruiser` are available
@@ -185,7 +185,7 @@ In that case, the workflow runs harness-owned checks such as
 Architect Companion offers. It detects stale generated targets without writing
 any files and fails with a non-zero exit code so CI can block on it. It also
 fails when `.architect-companion/profile.lock.yml` is missing or drifts from
-the resolved profile; see the **Adoption Hardening** section below.
+the resolved profiles; see the **Adoption Hardening** section below.
 
 Additional harness-owned verifications (for example, exception expiry) are not
 in scope today. They can be added once concrete cases drive their shape.
@@ -207,43 +207,53 @@ steps and report their own results. Architect Companion does not orchestrate
 them or normalize their output.
 
 ```yaml
-policies:
-  module-boundaries:
-    engine: dependency-cruiser
-  forbidden-patterns:
-    engine: semgrep
-```
-
-## Dependency-Cruiser Integration Contract
-
-The TypeScript modular monolith uses dependency-cruiser as its external analysis engine.
-
-The profile declares the implementation contract on an executable policy:
-
-```yaml
-implementation:
-  typescript:
+implementations:
+  - id: dependency-cruiser-cli-layer-boundaries
+    policy:
+      profile: cli
+      id: layer-boundaries
+    appliesTo:
+      language: typescript
     engine: dependency-cruiser
     renderer: dependency-cruiser-config
 ```
 
-`module-boundaries` is currently the only policy with this contract. The dependency-cruiser adapter consumes:
+## Dependency-Cruiser Integration Contract
 
-- project modules
-- each module path
-- each module public API path
+The TypeScript profile can use dependency-cruiser as its external analysis engine.
+
+The profile declares implementation contracts that map policies from selected
+profiles to a concrete engine and renderer:
+
+```yaml
+implementations:
+  - id: dependency-cruiser-cli-layer-boundaries
+    policy:
+      profile: cli
+      id: layer-boundaries
+    appliesTo:
+      language: typescript
+    engine: dependency-cruiser
+    renderer: dependency-cruiser-config
+```
+
+The dependency-cruiser adapter consumes:
+
+- project boundaries
+- each boundary path
+- each boundary public API path
 - `allowed_dependencies`
 - the policy severity
 
 It renders `.dependency-cruiser.cjs` with generated `forbidden` rules. Two rule kinds are generated:
 
-- undeclared module dependency: a module imports another module that is not listed in `allowed_dependencies`
-- internal module import: a module imports an allowed dependency through any file other than that dependency's public API
+- undeclared boundary dependency: a boundary imports another boundary that is not listed in `allowed_dependencies`
+- internal boundary import: a boundary imports an allowed dependency through any file other than that dependency's public API
 
 The command metadata for the external tool is:
 
 ```text
-depcruise --config .dependency-cruiser.cjs --output-type json <module paths>
+depcruise --config .dependency-cruiser.cjs --output-type json <boundary paths>
 ```
 
 The JSON output is mapped into an Architect Companion result shape with:
@@ -260,23 +270,32 @@ to block on violations.
 
 ## Example
 
-A TypeScript modular monolith profile may include a module boundary policy:
+A profile may include an architectural policy:
 
 ```yaml
 id: module-boundaries
 intent: Modules may depend only on their own public API or explicitly allowed shared modules.
 severity: error
+```
 
-implementation:
-  typescript:
+A TypeScript profile can then provide a concrete implementation:
+
+```yaml
+implementations:
+  - id: dependency-cruiser-modular-monolith-module-boundaries
+    policy:
+      profile: modular-monolith
+      id: module-boundaries
+    appliesTo:
+      language: typescript
     engine: dependency-cruiser
     renderer: dependency-cruiser-config
 ```
 
-A consuming repository may define its actual modules:
+A consuming repository defines the actual boundaries:
 
 ```yaml
-modules:
+boundaries:
   - name: billing
     path: src/modules/billing
     public_api: src/modules/billing/index.ts
@@ -298,7 +317,7 @@ allowed_dependencies:
 - `.dependency-cruiser.cjs` for dependency-cruiser
 - `.github/workflows/architecture.yml` for GitHub Actions
 
-If code imports an internal file from another module, dependency-cruiser catches it. Architect Companion did not reimplement dependency analysis; it encoded the architectural intent, generated the tool configuration, and wired it into the development workflow.
+If code imports an internal file from another boundary, dependency-cruiser catches it. Architect Companion did not reimplement dependency analysis; it encoded the architectural intent, generated the tool configuration, and wired it into the development workflow.
 
 ## Command Separation
 
@@ -307,7 +326,7 @@ The command semantics should stay clear:
 ```text
 render            deterministic compiler from harness to target files (incl. --check)
 doctor            environment and integration diagnosis
-upgrade-profile   rewrite the profile lock after a reviewed profile change
+upgrade-profile   rewrite the profile lock after reviewed profile changes
 review            advisory analysis, potentially AI-assisted (future)
 explain           human-readable harness context (future)
 ```
@@ -338,4 +357,4 @@ upgraded. The adoption-hardening surface covers four concerns:
 `render` and `render --check` integrate the lock into the existing freshness
 contract: a missing lock counts as a stale generated artifact in `--check` mode,
 and a stale lock fails both modes. `architect-companion upgrade-profile`
-rewrites the lock when the profile has been intentionally changed.
+rewrites the lock when selected profiles have been intentionally changed.

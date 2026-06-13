@@ -1,19 +1,23 @@
 import * as clack from "@clack/prompts";
 
-import { knownTargetKeys, supportedStacks } from "../model/effective-model.js";
-import type { KnownTargetKey, ProfileMetadata, SupportedStack } from "../model/effective-model.js";
+import { knownTargetKeys } from "../model/effective-model.js";
+import type { KnownTargetKey, ProfileMetadata } from "../model/effective-model.js";
 
 import { InitError } from "./errors.js";
 
 const projectNamePattern = /^[a-z][a-z0-9-]*$/;
+const languagePattern = /^[a-z][a-z0-9-]*$/;
+const defaultTargets: Partial<Record<KnownTargetKey, boolean>> = {
+  agentsMd: true,
+};
 
 export type WizardOptions = {
   defaultProjectName: string;
   installedProfiles: string[];
   loadProfile: (profileName: string) => Promise<ProfileMetadata>;
-  presetProfileName?: string;
+  presetLanguages?: string[];
+  presetProfileNames?: string[];
   presetProjectName?: string;
-  presetStack?: SupportedStack;
   presetTargetsExplicit: boolean;
 };
 
@@ -23,10 +27,10 @@ export type WizardResult =
       cancelled: false;
       disabledTargets: KnownTargetKey[];
       enabledTargets: KnownTargetKey[];
-      profileMetadata: ProfileMetadata;
-      profileName: string;
+      languages: string[];
+      profileMetadata: ProfileMetadata[];
+      profileNames: string[];
       projectName: string;
-      stack?: SupportedStack;
     };
 
 export async function runInitWizard(options: WizardOptions): Promise<WizardResult> {
@@ -40,19 +44,24 @@ export async function runInitWizard(options: WizardOptions): Promise<WizardResul
     return cancelled();
   }
 
-  const profileName = await promptProfileName(options.installedProfiles, options.presetProfileName);
-  if (profileName === undefined) {
+  const profileNames = await promptProfileNames(
+    options.installedProfiles,
+    options.presetProfileNames,
+  );
+  if (profileNames === undefined) {
     return cancelled();
   }
 
-  const profileMetadata = await options.loadProfile(profileName);
+  const profileMetadata = await Promise.all(
+    profileNames.map((profileName) => options.loadProfile(profileName)),
+  );
 
-  const stackOutcome = await promptStack(profileMetadata, options.presetStack);
-  if (stackOutcome.kind === "cancelled") {
+  const languages = await promptLanguages(profileNames, options.presetLanguages);
+  if (languages === undefined) {
     return cancelled();
   }
 
-  const targetSelection = await promptTargets(profileMetadata, options.presetTargetsExplicit);
+  const targetSelection = await promptTargets(options.presetTargetsExplicit);
   if (targetSelection === undefined) {
     return cancelled();
   }
@@ -60,10 +69,10 @@ export async function runInitWizard(options: WizardOptions): Promise<WizardResul
   const confirmed = await clack.confirm({
     initialValue: true,
     message: buildConfirmMessage({
+      enabledTargets: targetSelection.enabled,
+      languages,
       profileMetadata,
       projectName,
-      stack: stackOutcome.stack,
-      enabledTargets: targetSelection.enabled,
     }),
   });
 
@@ -74,18 +83,15 @@ export async function runInitWizard(options: WizardOptions): Promise<WizardResul
 
   clack.outro("ready to initialize.");
 
-  const result: WizardResult = {
+  return {
     cancelled: false,
     disabledTargets: targetSelection.disabled,
     enabledTargets: targetSelection.enabled,
+    languages,
     profileMetadata,
-    profileName,
+    profileNames,
     projectName,
   };
-  if (stackOutcome.explicit) {
-    result.stack = stackOutcome.stack;
-  }
-  return result;
 }
 
 async function promptProjectName(
@@ -100,7 +106,7 @@ async function promptProjectName(
   const result = await clack.text({
     initialValue,
     message: "Project name",
-    validate: (value) => {
+    validate: (value: string | undefined) => {
       if (value === undefined || !projectNamePattern.test(value)) {
         return "Use lowercase letters, numbers, and hyphens, starting with a letter.";
       }
@@ -115,18 +121,19 @@ async function promptProjectName(
   return result;
 }
 
-async function promptProfileName(
+async function promptProfileNames(
   installedProfiles: string[],
-  preset: string | undefined,
-): Promise<string | undefined> {
-  if (preset !== undefined) {
-    if (!installedProfiles.includes(preset)) {
+  presets: string[] | undefined,
+): Promise<string[] | undefined> {
+  if (presets !== undefined && presets.length > 0) {
+    const missing = presets.filter((preset) => !installedProfiles.includes(preset));
+    if (missing.length > 0) {
       throw new InitError(
-        `--profile ${preset} is not installed (installed: ${installedProfiles.length === 0 ? "none" : installedProfiles.join(", ")}).`,
+        `--profile ${missing.join(", ")} ${missing.length === 1 ? "is" : "are"} not installed (installed: ${installedProfiles.length === 0 ? "none" : installedProfiles.join(", ")}).`,
       );
     }
-    clack.note(`Profile: ${preset} (from --profile)`);
-    return preset;
+    clack.note(`Profiles: ${presets.join(", ")} (from --profile)`);
+    return presets;
   }
 
   if (installedProfiles.length === 0) {
@@ -138,13 +145,14 @@ async function promptProfileName(
     if (only === undefined) {
       throw new InitError("No profiles installed.");
     }
-    clack.note(`Profile: ${only} (only installed profile)`);
-    return only;
+    clack.note(`Profiles: ${only} (only installed profile)`);
+    return [only];
   }
 
-  const result = await clack.select<string>({
-    message: "Profile",
+  const result = await clack.multiselect<string>({
+    message: "Profiles",
     options: installedProfiles.map((name) => ({ label: name, value: name })),
+    required: true,
   });
 
   if (clack.isCancel(result)) {
@@ -154,41 +162,37 @@ async function promptProfileName(
   return result;
 }
 
-type StackOutcome =
-  | { kind: "cancelled" }
-  | { explicit: boolean; kind: "resolved"; stack: SupportedStack };
-
-async function promptStack(
-  profileMetadata: ProfileMetadata,
-  preset: SupportedStack | undefined,
-): Promise<StackOutcome> {
-  const profileStack = profileMetadata.defaults.stack;
-
-  if (preset !== undefined) {
-    if (profileStack !== undefined && profileStack !== preset) {
-      throw new InitError(
-        `--stack ${preset} is not supported by profile ${profileMetadata.profile.name}@${profileMetadata.profile.version} (supports: ${profileStack}).`,
-      );
-    }
-    clack.note(`Stack: ${preset} (from --stack)`);
-    return { explicit: true, kind: "resolved", stack: preset };
+async function promptLanguages(
+  profileNames: string[],
+  presets: string[] | undefined,
+): Promise<string[] | undefined> {
+  if (presets !== undefined && presets.length > 0) {
+    clack.note(`Languages: ${presets.join(", ")} (from --language)`);
+    return presets;
   }
 
-  if (profileStack !== undefined) {
-    clack.note(`Stack: ${profileStack} (profile default)`);
-    return { explicit: false, kind: "resolved", stack: profileStack };
-  }
-
-  const result = await clack.select<SupportedStack>({
-    message: "Stack",
-    options: supportedStacks.map((stack) => ({ label: stack, value: stack })),
+  const initialValue = profileNames.includes("typescript") ? "typescript" : "";
+  const result = await clack.text({
+    initialValue,
+    message: "Project languages",
+    validate: (value: string | undefined) => {
+      const languages = parseLanguageList(value);
+      if (languages.length === 0) {
+        return "Provide at least one language.";
+      }
+      const invalid = languages.find((language) => !languagePattern.test(language));
+      if (invalid !== undefined) {
+        return `${invalid} must use lowercase letters, numbers, and hyphens, starting with a letter.`;
+      }
+      return undefined;
+    },
   });
 
   if (clack.isCancel(result)) {
-    return { kind: "cancelled" };
+    return undefined;
   }
 
-  return { explicit: true, kind: "resolved", stack: result };
+  return parseLanguageList(result);
 }
 
 type TargetSelection = {
@@ -196,17 +200,13 @@ type TargetSelection = {
   enabled: KnownTargetKey[];
 };
 
-async function promptTargets(
-  profileMetadata: ProfileMetadata,
-  presetExplicit: boolean,
-): Promise<TargetSelection | undefined> {
+async function promptTargets(presetExplicit: boolean): Promise<TargetSelection | undefined> {
   if (presetExplicit) {
     clack.note("Targets: using values from --target / --no-target");
     return { disabled: [], enabled: [] };
   }
 
-  const defaults = profileMetadata.defaults.targets;
-  const initialValues = knownTargetKeys.filter((target) => defaults[target] === true);
+  const initialValues = knownTargetKeys.filter((target) => defaultTargets[target] === true);
 
   const result = await clack.multiselect<KnownTargetKey>({
     initialValues,
@@ -227,11 +227,11 @@ async function promptTargets(
   const disabled: KnownTargetKey[] = [];
 
   for (const target of knownTargetKeys) {
-    const profileDefault = defaults[target] === true;
+    const defaultValue = defaultTargets[target] === true;
     const isChosen = chosen.has(target);
-    if (isChosen && !profileDefault) {
+    if (isChosen && !defaultValue) {
       enabled.push(target);
-    } else if (!isChosen && profileDefault) {
+    } else if (!isChosen && defaultValue) {
       disabled.push(target);
     }
   }
@@ -241,16 +241,31 @@ async function promptTargets(
 
 function buildConfirmMessage(args: {
   enabledTargets: KnownTargetKey[];
-  profileMetadata: ProfileMetadata;
+  languages: string[];
+  profileMetadata: ProfileMetadata[];
   projectName: string;
-  stack: SupportedStack | undefined;
 }): string {
+  const profiles = args.profileMetadata
+    .map((metadata) => `${metadata.profile.name}@${metadata.profile.version}`)
+    .join(", ");
   const lines = [
-    `Initialize ${args.projectName} with profile ${args.profileMetadata.profile.name}@${args.profileMetadata.profile.version}`,
-    `  Stack: ${args.stack ?? "(none)"}`,
+    `Initialize ${args.projectName} with profiles ${profiles}`,
+    `  Languages: ${args.languages.join(", ")}`,
     `  Enabled targets: ${args.enabledTargets.length === 0 ? "(none)" : args.enabledTargets.join(", ")}`,
   ];
   return lines.join("\n");
+}
+
+function parseLanguageList(value: string | undefined): string[] {
+  if (value === undefined) {
+    return [];
+  }
+
+  const languages = value
+    .split(",")
+    .map((language) => language.trim())
+    .filter((language) => language.length > 0);
+  return Array.from(new Set(languages));
 }
 
 function cancelled(): { cancelled: true } {

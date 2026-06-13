@@ -7,43 +7,43 @@ import { knownTargetKeys, type KnownTargetKey } from "../targets/target-registry
 
 export { knownTargetKeys, type KnownTargetKey } from "../targets/target-registry.js";
 
-export const supportedStacks = ["typescript"] as const;
 const supportedPolicySeverities = ["advisory", "warning", "error"] as const;
 const supportedPolicyEngines = ["dependency-cruiser"] as const;
 const supportedPolicyRenderers = ["dependency-cruiser-config"] as const;
 
-export type SupportedStack = (typeof supportedStacks)[number];
 type PolicySeverity = (typeof supportedPolicySeverities)[number];
 type PolicyEngine = (typeof supportedPolicyEngines)[number];
 type PolicyRenderer = (typeof supportedPolicyRenderers)[number];
 type TargetSelection = Partial<Record<KnownTargetKey, boolean>>;
 
+export type ProfileReference = {
+  name: string;
+  version: string;
+};
+
 export type ProfileMetadata = {
-  defaults: {
-    stack?: SupportedStack;
-    targets: Partial<Record<KnownTargetKey, boolean>>;
-  };
-  profile: {
-    name: string;
-    summary?: string;
-    title?: string;
-    version: string;
-  };
+  profile: EffectiveProfile;
+};
+
+export type PolicyReference = {
+  id: string;
+  profile: string;
 };
 
 export type EffectiveHarnessModel = {
   allowedDependencies: Record<string, string[]>;
+  boundaries: EffectiveBoundary[];
   examples: EffectiveExample[];
   heuristics: EffectiveHeuristic[];
-  modules: EffectiveModule[];
+  implementations: EffectiveImplementation[];
   policies: EffectivePolicy[];
   principles: EffectivePrinciple[];
-  profile: EffectiveProfile;
+  profiles: EffectiveProfile[];
   project: {
+    languages: string[];
     name: string;
   };
   schemaVersion: 1;
-  stack: SupportedStack;
   targets: Record<KnownTargetKey, boolean>;
   workflows: EffectiveWorkflow[];
 };
@@ -55,45 +55,53 @@ type EffectiveProfile = {
   version: string;
 };
 
-type EffectiveModule = {
+type SourceTagged = {
+  sourceProfile: string;
+};
+
+type EffectiveBoundary = {
   name: string;
   path: string;
   publicApi: string;
 };
 
-type EffectivePrinciple = {
+type EffectivePrinciple = SourceTagged & {
   guidance: string;
   id: string;
   title: string;
 };
 
-type EffectivePolicy = {
+type EffectivePolicy = SourceTagged & {
   guidance: string;
   id: string;
-  implementation?: Partial<Record<SupportedStack, EffectivePolicyImplementation>>;
   intent: string;
   severity: PolicySeverity;
   title: string;
 };
 
-type EffectivePolicyImplementation = {
+type EffectiveImplementation = SourceTagged & {
+  appliesTo: {
+    language: string;
+  };
   engine: PolicyEngine;
+  id: string;
+  policy: PolicyReference;
   renderer: PolicyRenderer;
 };
 
-type EffectiveWorkflow = {
+type EffectiveWorkflow = SourceTagged & {
   id: string;
   steps: string[];
   title: string;
 };
 
-type EffectiveHeuristic = {
+type EffectiveHeuristic = SourceTagged & {
   id: string;
   questions: string[];
   title: string;
 };
 
-type EffectiveExample = {
+type EffectiveExample = SourceTagged & {
   bad: string;
   good: string;
   id: string;
@@ -101,12 +109,9 @@ type EffectiveExample = {
 };
 
 type ProfileConfig = {
-  defaults: {
-    stack?: SupportedStack;
-    targets: TargetSelection;
-  };
   examples: EffectiveExample[];
   heuristics: EffectiveHeuristic[];
+  implementations: EffectiveImplementation[];
   policies: EffectivePolicy[];
   principles: EffectivePrinciple[];
   profile: EffectiveProfile;
@@ -115,22 +120,19 @@ type ProfileConfig = {
 };
 
 type HarnessConfig = {
-  modules: string;
-  profile: {
-    name: string;
-    version: string;
-  };
+  boundaries: string;
+  profiles: ProfileReference[];
   project: {
+    languages: string[];
     name: string;
   };
   schemaVersion: 1;
-  stack?: SupportedStack;
   targets: TargetSelection;
 };
 
-type ModuleMetadata = {
+type BoundaryMetadata = {
   allowedDependencies: Record<string, string[]>;
-  modules: EffectiveModule[];
+  boundaries: EffectiveBoundary[];
   schemaVersion: 1;
 };
 
@@ -163,50 +165,46 @@ export async function loadEffectiveHarnessModel(
     filePath: harnessDisplayPath,
   });
 
-  const profilePath = path.join(profilesDir, harness.profile.name, "profile.yml");
-  const profileDisplayPath = displayPath(profilePath, path.dirname(profilesDir));
-  const profile = parseProfileConfig(await readYamlFile(profilePath, profileDisplayPath), {
-    filePath: profileDisplayPath,
+  const profileConfigs = await Promise.all(
+    harness.profiles.map(async (profileReference) =>
+      loadProfileConfig(
+        profilesDir,
+        profileReference,
+        path.dirname(profilesDir),
+        harnessDisplayPath,
+      ),
+    ),
+  );
+
+  const boundariesPath = path.join(harnessDir, harness.boundaries);
+  const boundariesDisplayPath = displayPath(boundariesPath, projectDir);
+  const boundaryMetadata = parseBoundaryMetadata(
+    await readYamlFile(boundariesPath, boundariesDisplayPath),
+    {
+      filePath: boundariesDisplayPath,
+    },
+  );
+
+  const policies = profileConfigs.flatMap((config) => config.policies);
+  const implementations = resolveActiveImplementations({
+    languages: harness.project.languages,
+    policies,
+    profileConfigs,
   });
-
-  if (profile.profile.name !== harness.profile.name) {
-    throw new HarnessConfigError(
-      `${profileDisplayPath}: profile.name must match harness profile "${harness.profile.name}".`,
-    );
-  }
-
-  if (profile.profile.version !== harness.profile.version) {
-    throw new HarnessConfigError(
-      `${harnessDisplayPath}: profile.version "${harness.profile.version}" does not match ${profileDisplayPath} version "${profile.profile.version}".`,
-    );
-  }
-
-  const modulesPath = path.join(harnessDir, harness.modules);
-  const modulesDisplayPath = displayPath(modulesPath, projectDir);
-  const moduleMetadata = parseModuleMetadata(await readYamlFile(modulesPath, modulesDisplayPath), {
-    filePath: modulesDisplayPath,
-  });
-
-  const stack = harness.stack ?? profile.defaults.stack;
-  if (stack === undefined) {
-    throw new HarnessConfigError(
-      `${harnessDisplayPath}: stack is required when the selected profile has no default stack.`,
-    );
-  }
 
   return {
-    allowedDependencies: moduleMetadata.allowedDependencies,
-    examples: profile.examples,
-    heuristics: profile.heuristics,
-    modules: moduleMetadata.modules,
-    policies: profile.policies,
-    principles: profile.principles,
-    profile: profile.profile,
+    allowedDependencies: boundaryMetadata.allowedDependencies,
+    boundaries: boundaryMetadata.boundaries,
+    examples: profileConfigs.flatMap((config) => config.examples),
+    heuristics: profileConfigs.flatMap((config) => config.heuristics),
+    implementations,
+    policies,
+    principles: profileConfigs.flatMap((config) => config.principles),
+    profiles: profileConfigs.map((config) => config.profile),
     project: harness.project,
     schemaVersion: 1,
-    stack,
-    targets: mergeTargets(profile.defaults.targets, harness.targets),
-    workflows: profile.workflows,
+    targets: expandTargets(harness.targets),
+    workflows: profileConfigs.flatMap((config) => config.workflows),
   };
 }
 
@@ -233,7 +231,6 @@ export async function loadProfileMetadata(
   }
 
   return {
-    defaults: config.defaults,
     profile: config.profile,
   };
 }
@@ -272,6 +269,37 @@ export async function discoverProfileNames(profilesDir: string): Promise<string[
   return names.sort();
 }
 
+export function formatPolicyReference(reference: PolicyReference): string {
+  return `${reference.profile}.${reference.id}`;
+}
+
+async function loadProfileConfig(
+  profilesDir: string,
+  profileReference: ProfileReference,
+  displayRoot: string,
+  harnessDisplayPath: string,
+): Promise<ProfileConfig> {
+  const profilePath = path.join(profilesDir, profileReference.name, "profile.yml");
+  const profileDisplayPath = displayPath(profilePath, displayRoot);
+  const profile = parseProfileConfig(await readYamlFile(profilePath, profileDisplayPath), {
+    filePath: profileDisplayPath,
+  });
+
+  if (profile.profile.name !== profileReference.name) {
+    throw new HarnessConfigError(
+      `${profileDisplayPath}: profile.name must match harness profile "${profileReference.name}".`,
+    );
+  }
+
+  if (profile.profile.version !== profileReference.version) {
+    throw new HarnessConfigError(
+      `${harnessDisplayPath}: profile "${profileReference.name}" version "${profileReference.version}" does not match ${profileDisplayPath} version "${profile.profile.version}".`,
+    );
+  }
+
+  return profile;
+}
+
 async function readYamlFile(filePath: string, displayFilePath: string): Promise<unknown> {
   let source: string;
 
@@ -305,12 +333,12 @@ function parseProfileConfig(value: unknown, context: ValidationContext): Profile
     [
       "schemaVersion",
       "profile",
-      "defaults",
       "principles",
       "policies",
       "workflows",
       "heuristics",
       "examples",
+      "implementations",
     ],
     context,
     "$",
@@ -335,32 +363,20 @@ function parseProfileConfig(value: unknown, context: ValidationContext): Profile
     profile.summary = summary;
   }
 
-  const defaultsRoot =
-    root.defaults === undefined ? {} : asObject(root.defaults, context, "defaults");
-  assertKnownKeys(defaultsRoot, ["stack", "targets"], context, "defaults");
-
-  const stack = optionalStack(defaultsRoot.stack, context, "defaults.stack");
-  const targets = parseTargets(defaultsRoot.targets, context, "defaults.targets");
-  const principles = parsePrinciples(root.principles, context, "principles");
-  const policies = parsePolicies(root.policies, context, "policies");
-  const workflows = parseWorkflows(root.workflows, context, "workflows");
-  const heuristics = parseHeuristics(root.heuristics, context, "heuristics");
-  const examples = parseExamples(root.examples, context, "examples");
-
-  const defaults: ProfileConfig["defaults"] = { targets };
-  if (stack !== undefined) {
-    defaults.stack = stack;
-  }
-
   return {
-    defaults,
-    examples,
-    heuristics,
-    policies,
-    principles,
+    examples: parseExamples(root.examples, profile.name, context, "examples"),
+    heuristics: parseHeuristics(root.heuristics, profile.name, context, "heuristics"),
+    implementations: parseImplementations(
+      root.implementations,
+      profile.name,
+      context,
+      "implementations",
+    ),
+    policies: parsePolicies(root.policies, profile.name, context, "policies"),
+    principles: parsePrinciples(root.principles, profile.name, context, "principles"),
     profile,
     schemaVersion: 1,
-    workflows,
+    workflows: parseWorkflows(root.workflows, profile.name, context, "workflows"),
   };
 }
 
@@ -368,89 +384,135 @@ function parseHarnessConfig(value: unknown, context: ValidationContext): Harness
   const root = asObject(value, context, "$");
   assertKnownKeys(
     root,
-    ["schemaVersion", "profile", "project", "stack", "modules", "targets"],
+    ["schemaVersion", "profiles", "project", "boundaries", "targets"],
     context,
     "$",
   );
   assertSchemaVersion(root.schemaVersion, context, "schemaVersion");
 
-  const profileRoot = asObject(root.profile, context, "profile");
-  assertKnownKeys(profileRoot, ["name", "version"], context, "profile");
-
   const projectRoot = asObject(root.project, context, "project");
-  assertKnownKeys(projectRoot, ["name"], context, "project");
+  assertKnownKeys(projectRoot, ["name", "languages"], context, "project");
 
-  const stack = optionalStack(root.stack, context, "stack");
-  const modules = asRelativePath(root.modules, context, "modules");
-  const targets = parseTargets(root.targets, context, "targets");
-
-  const harness: HarnessConfig = {
-    modules,
-    profile: {
-      name: asIdentifier(profileRoot.name, context, "profile.name"),
-      version: asSemver(profileRoot.version, context, "profile.version"),
-    },
+  return {
+    boundaries: asRelativePath(root.boundaries, context, "boundaries"),
+    profiles: parseProfileReferences(root.profiles, context, "profiles"),
     project: {
+      languages: parseLanguages(projectRoot.languages, context, "project.languages"),
       name: asIdentifier(projectRoot.name, context, "project.name"),
     },
     schemaVersion: 1,
-    targets,
+    targets: parseTargets(root.targets, context, "targets"),
   };
-
-  if (stack !== undefined) {
-    harness.stack = stack;
-  }
-
-  return harness;
 }
 
-function parseModuleMetadata(value: unknown, context: ValidationContext): ModuleMetadata {
-  const root = asObject(value, context, "$");
-  assertKnownKeys(root, ["schemaVersion", "modules", "allowed_dependencies"], context, "$");
-  assertSchemaVersion(root.schemaVersion, context, "schemaVersion");
-
-  if (!Array.isArray(root.modules)) {
-    throw expected(context, "modules", "array");
+function parseProfileReferences(
+  value: unknown,
+  context: ValidationContext,
+  fieldPath: string,
+): ProfileReference[] {
+  if (!Array.isArray(value)) {
+    throw expected(context, fieldPath, "array");
   }
 
-  const moduleNames = new Set<string>();
-  const modules = root.modules.map((moduleValue, index): EffectiveModule => {
-    const fieldPath = `modules[${index}]`;
-    const moduleRoot = asObject(moduleValue, context, fieldPath);
-    assertKnownKeys(moduleRoot, ["name", "path", "public_api"], context, fieldPath);
+  if (value.length === 0) {
+    throw new HarnessConfigError(
+      `${context.filePath}: ${fieldPath} must include at least one item.`,
+    );
+  }
 
-    const name = asIdentifier(moduleRoot.name, context, `${fieldPath}.name`);
-    if (moduleNames.has(name)) {
+  const names = new Set<string>();
+  return value.map((itemValue, index): ProfileReference => {
+    const itemPath = `${fieldPath}[${index}]`;
+    const itemRoot = asObject(itemValue, context, itemPath);
+    assertKnownKeys(itemRoot, ["name", "version"], context, itemPath);
+
+    const name = asIdentifier(itemRoot.name, context, `${itemPath}.name`);
+    if (names.has(name)) {
       throw new HarnessConfigError(
-        `${context.filePath}: ${fieldPath}.name duplicates module "${name}".`,
+        `${context.filePath}: ${itemPath}.name duplicates profile "${name}".`,
       );
     }
-
-    moduleNames.add(name);
+    names.add(name);
 
     return {
       name,
-      path: asRelativePath(moduleRoot.path, context, `${fieldPath}.path`),
-      publicApi: asRelativePath(moduleRoot.public_api, context, `${fieldPath}.public_api`),
+      version: asSemver(itemRoot.version, context, `${itemPath}.version`),
+    };
+  });
+}
+
+function parseLanguages(value: unknown, context: ValidationContext, fieldPath: string): string[] {
+  if (!Array.isArray(value)) {
+    throw expected(context, fieldPath, "array");
+  }
+
+  if (value.length === 0) {
+    throw new HarnessConfigError(
+      `${context.filePath}: ${fieldPath} must include at least one item.`,
+    );
+  }
+
+  const languages = new Set<string>();
+  return value.map((item, index) => {
+    const language = asIdentifier(item, context, `${fieldPath}[${index}]`);
+    if (languages.has(language)) {
+      throw new HarnessConfigError(
+        `${context.filePath}: ${fieldPath}[${index}] duplicates language "${language}".`,
+      );
+    }
+    languages.add(language);
+    return language;
+  });
+}
+
+function parseBoundaryMetadata(value: unknown, context: ValidationContext): BoundaryMetadata {
+  const root = asObject(value, context, "$");
+  assertKnownKeys(root, ["schemaVersion", "boundaries", "allowed_dependencies"], context, "$");
+  assertSchemaVersion(root.schemaVersion, context, "schemaVersion");
+
+  if (!Array.isArray(root.boundaries)) {
+    throw expected(context, "boundaries", "array");
+  }
+
+  const boundaryNames = new Set<string>();
+  const boundaries = root.boundaries.map((boundaryValue, index): EffectiveBoundary => {
+    const fieldPath = `boundaries[${index}]`;
+    const boundaryRoot = asObject(boundaryValue, context, fieldPath);
+    assertKnownKeys(boundaryRoot, ["name", "path", "public_api"], context, fieldPath);
+
+    const name = asIdentifier(boundaryRoot.name, context, `${fieldPath}.name`);
+    if (boundaryNames.has(name)) {
+      throw new HarnessConfigError(
+        `${context.filePath}: ${fieldPath}.name duplicates boundary "${name}".`,
+      );
+    }
+
+    boundaryNames.add(name);
+
+    return {
+      name,
+      path: asRelativePath(boundaryRoot.path, context, `${fieldPath}.path`),
+      publicApi: asRelativePath(boundaryRoot.public_api, context, `${fieldPath}.public_api`),
     };
   });
 
   const allowedDependencies = parseAllowedDependencies(
     root.allowed_dependencies,
-    moduleNames,
+    boundaryNames,
     context,
     "allowed_dependencies",
   );
 
   return {
     allowedDependencies,
-    modules: modules.sort((left, right) => left.name.localeCompare(right.name)),
+    boundaries: boundaries.sort((left, right) => left.name.localeCompare(right.name)),
     schemaVersion: 1,
   };
 }
 
 function parsePrinciples(
   value: unknown,
+  sourceProfile: string,
   context: ValidationContext,
   fieldPath: string,
 ): EffectivePrinciple[] {
@@ -464,6 +526,7 @@ function parsePrinciples(
       return {
         guidance: asNonEmptyString(itemRoot.guidance, context, `${itemPath}.guidance`),
         id: asIdentifier(itemRoot.id, context, `${itemPath}.id`),
+        sourceProfile,
         title: asNonEmptyString(itemRoot.title, context, `${itemPath}.title`),
       };
     },
@@ -472,6 +535,7 @@ function parsePrinciples(
 
 function parsePolicies(
   value: unknown,
+  sourceProfile: string,
   context: ValidationContext,
   fieldPath: string,
 ): EffectivePolicy[] {
@@ -482,35 +546,87 @@ function parsePolicies(
     (policyRoot, policyPath): EffectivePolicy => {
       assertKnownKeys(
         policyRoot,
-        ["id", "title", "intent", "severity", "guidance", "implementation"],
+        ["id", "title", "intent", "severity", "guidance"],
         context,
         policyPath,
       );
 
-      const policy: EffectivePolicy = {
+      return {
         guidance: asNonEmptyString(policyRoot.guidance, context, `${policyPath}.guidance`),
         id: asIdentifier(policyRoot.id, context, `${policyPath}.id`),
         intent: asNonEmptyString(policyRoot.intent, context, `${policyPath}.intent`),
         severity: asPolicySeverity(policyRoot.severity, context, `${policyPath}.severity`),
+        sourceProfile,
         title: asNonEmptyString(policyRoot.title, context, `${policyPath}.title`),
       };
+    },
+  );
+}
 
-      const implementation = parsePolicyImplementation(
-        policyRoot.implementation,
+function parseImplementations(
+  value: unknown,
+  sourceProfile: string,
+  context: ValidationContext,
+  fieldPath: string,
+): EffectiveImplementation[] {
+  return parseIdentifiedItems(
+    value,
+    context,
+    fieldPath,
+    (implementationRoot, implementationPath): EffectiveImplementation => {
+      assertKnownKeys(
+        implementationRoot,
+        ["id", "policy", "appliesTo", "engine", "renderer"],
         context,
-        `${policyPath}.implementation`,
+        implementationPath,
       );
-      if (implementation !== undefined) {
-        policy.implementation = implementation;
-      }
 
-      return policy;
+      const policyRoot = asObject(
+        implementationRoot.policy,
+        context,
+        `${implementationPath}.policy`,
+      );
+      assertKnownKeys(policyRoot, ["profile", "id"], context, `${implementationPath}.policy`);
+
+      const appliesToRoot = asObject(
+        implementationRoot.appliesTo,
+        context,
+        `${implementationPath}.appliesTo`,
+      );
+      assertKnownKeys(appliesToRoot, ["language"], context, `${implementationPath}.appliesTo`);
+
+      return {
+        appliesTo: {
+          language: asIdentifier(
+            appliesToRoot.language,
+            context,
+            `${implementationPath}.appliesTo.language`,
+          ),
+        },
+        engine: asPolicyEngine(implementationRoot.engine, context, `${implementationPath}.engine`),
+        id: asIdentifier(implementationRoot.id, context, `${implementationPath}.id`),
+        policy: {
+          id: asIdentifier(policyRoot.id, context, `${implementationPath}.policy.id`),
+          profile: asIdentifier(
+            policyRoot.profile,
+            context,
+            `${implementationPath}.policy.profile`,
+          ),
+        },
+        renderer: asPolicyRenderer(
+          implementationRoot.renderer,
+          context,
+          `${implementationPath}.renderer`,
+        ),
+        sourceProfile,
+      };
     },
   );
 }
 
 function parseWorkflows(
   value: unknown,
+  sourceProfile: string,
   context: ValidationContext,
   fieldPath: string,
 ): EffectiveWorkflow[] {
@@ -519,6 +635,7 @@ function parseWorkflows(
 
     return {
       id: asIdentifier(workflowRoot.id, context, `${workflowPath}.id`),
+      sourceProfile,
       steps: asNonEmptyStringArray(workflowRoot.steps, context, `${workflowPath}.steps`),
       title: asNonEmptyString(workflowRoot.title, context, `${workflowPath}.title`),
     };
@@ -527,6 +644,7 @@ function parseWorkflows(
 
 function parseHeuristics(
   value: unknown,
+  sourceProfile: string,
   context: ValidationContext,
   fieldPath: string,
 ): EffectiveHeuristic[] {
@@ -540,6 +658,7 @@ function parseHeuristics(
         context,
         `${heuristicPath}.questions`,
       ),
+      sourceProfile,
       title: asNonEmptyString(heuristicRoot.title, context, `${heuristicPath}.title`),
     };
   });
@@ -547,6 +666,7 @@ function parseHeuristics(
 
 function parseExamples(
   value: unknown,
+  sourceProfile: string,
   context: ValidationContext,
   fieldPath: string,
 ): EffectiveExample[] {
@@ -557,43 +677,47 @@ function parseExamples(
       bad: asNonEmptyString(exampleRoot.bad, context, `${examplePath}.bad`),
       good: asNonEmptyString(exampleRoot.good, context, `${examplePath}.good`),
       id: asIdentifier(exampleRoot.id, context, `${examplePath}.id`),
+      sourceProfile,
       title: asNonEmptyString(exampleRoot.title, context, `${examplePath}.title`),
     };
   });
 }
 
-function parsePolicyImplementation(
-  value: unknown,
-  context: ValidationContext,
-  fieldPath: string,
-): Partial<Record<SupportedStack, EffectivePolicyImplementation>> | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
+function resolveActiveImplementations(args: {
+  languages: string[];
+  policies: EffectivePolicy[];
+  profileConfigs: ProfileConfig[];
+}): EffectiveImplementation[] {
+  const selectedProfiles = new Set(args.profileConfigs.map((config) => config.profile.name));
+  const selectedLanguages = new Set(args.languages);
+  const policiesByReference = new Set(args.policies.map((policy) => policyKey(policy)));
+  const activeImplementations: EffectiveImplementation[] = [];
 
-  const root = asObject(value, context, fieldPath);
-  assertKnownKeys(root, supportedStacks, context, fieldPath);
-
-  const implementation: Partial<Record<SupportedStack, EffectivePolicyImplementation>> = {};
-  for (const stack of supportedStacks) {
-    if (root[stack] === undefined) {
+  for (const implementation of args.profileConfigs.flatMap((config) => config.implementations)) {
+    if (!selectedProfiles.has(implementation.policy.profile)) {
       continue;
     }
 
-    const stackPath = `${fieldPath}.${stack}`;
-    const stackRoot = asObject(root[stack], context, stackPath);
-    assertKnownKeys(stackRoot, ["engine", "renderer"], context, stackPath);
-    implementation[stack] = {
-      engine: asPolicyEngine(stackRoot.engine, context, `${stackPath}.engine`),
-      renderer: asPolicyRenderer(stackRoot.renderer, context, `${stackPath}.renderer`),
-    };
+    if (!selectedLanguages.has(implementation.appliesTo.language)) {
+      continue;
+    }
+
+    if (!policiesByReference.has(policyKey(implementation.policy))) {
+      throw new HarnessConfigError(
+        `implementation "${implementation.sourceProfile}.${implementation.id}" references selected policy "${formatPolicyReference(implementation.policy)}", but that policy does not exist.`,
+      );
+    }
+
+    activeImplementations.push(implementation);
   }
 
-  if (Object.keys(implementation).length === 0) {
-    return undefined;
-  }
+  return activeImplementations;
+}
 
-  return implementation;
+function policyKey(reference: PolicyReference | EffectivePolicy): string {
+  return "profile" in reference
+    ? `${reference.profile}:${reference.id}`
+    : `${reference.sourceProfile}:${reference.id}`;
 }
 
 function parseIdentifiedItems<T extends { id: string }>(
@@ -629,7 +753,7 @@ function parseIdentifiedItems<T extends { id: string }>(
 
 function parseAllowedDependencies(
   value: unknown,
-  moduleNames: Set<string>,
+  boundaryNames: Set<string>,
   context: ValidationContext,
   fieldPath: string,
 ): Record<string, string[]> {
@@ -640,14 +764,14 @@ function parseAllowedDependencies(
   const root = asObject(value, context, fieldPath);
   const result: Record<string, string[]> = {};
 
-  for (const [sourceModule, dependencies] of Object.entries(root)) {
-    if (!moduleNames.has(sourceModule)) {
+  for (const [sourceBoundary, dependencies] of Object.entries(root)) {
+    if (!boundaryNames.has(sourceBoundary)) {
       throw new HarnessConfigError(
-        `${context.filePath}: ${fieldPath}.${sourceModule} references unknown module "${sourceModule}".`,
+        `${context.filePath}: ${fieldPath}.${sourceBoundary} references unknown boundary "${sourceBoundary}".`,
       );
     }
 
-    const dependencyPath = `${fieldPath}.${sourceModule}`;
+    const dependencyPath = `${fieldPath}.${sourceBoundary}`;
     if (!Array.isArray(dependencies)) {
       throw expected(context, dependencyPath, "array");
     }
@@ -655,15 +779,15 @@ function parseAllowedDependencies(
     const uniqueDependencies = new Set<string>();
     dependencies.forEach((dependency, index) => {
       const dependencyName = asIdentifier(dependency, context, `${dependencyPath}[${index}]`);
-      if (!moduleNames.has(dependencyName)) {
+      if (!boundaryNames.has(dependencyName)) {
         throw new HarnessConfigError(
-          `${context.filePath}: ${dependencyPath}[${index}] references unknown module "${dependencyName}".`,
+          `${context.filePath}: ${dependencyPath}[${index}] references unknown boundary "${dependencyName}".`,
         );
       }
       uniqueDependencies.add(dependencyName);
     });
 
-    result[sourceModule] = Array.from(uniqueDependencies).sort((left, right) =>
+    result[sourceBoundary] = Array.from(uniqueDependencies).sort((left, right) =>
       left.localeCompare(right),
     );
   }
@@ -676,10 +800,6 @@ function parseTargets(
   context: ValidationContext,
   fieldPath: string,
 ): TargetSelection {
-  if (value === undefined) {
-    return {};
-  }
-
   const root = asObject(value, context, fieldPath);
   assertKnownKeys(root, knownTargetKeys, context, fieldPath);
 
@@ -693,18 +813,14 @@ function parseTargets(
   return targets;
 }
 
-function mergeTargets(
-  profileTargets: TargetSelection,
-  harnessTargets: TargetSelection,
-): Record<KnownTargetKey, boolean> {
+function expandTargets(targetSelection: TargetSelection): Record<KnownTargetKey, boolean> {
   const targets = Object.fromEntries(knownTargetKeys.map((key) => [key, false])) as Record<
     KnownTargetKey,
     boolean
   >;
 
   for (const key of knownTargetKeys) {
-    targets[key] = profileTargets[key] ?? targets[key];
-    targets[key] = harnessTargets[key] ?? targets[key];
+    targets[key] = targetSelection[key] ?? false;
   }
 
   return targets;
@@ -805,32 +921,13 @@ function asSemver(value: unknown, context: ValidationContext, fieldPath: string)
   return version;
 }
 
-function optionalStack(
-  value: unknown,
-  context: ValidationContext,
-  fieldPath: string,
-): SupportedStack | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  const stack = asNonEmptyString(value, context, fieldPath);
-  if (!isSupportedStack(stack)) {
-    throw new HarnessConfigError(
-      `${context.filePath}: ${fieldPath} must be one of: ${supportedStacks.join(", ")}.`,
-    );
-  }
-
-  return stack;
-}
-
 function asPolicySeverity(
   value: unknown,
   context: ValidationContext,
   fieldPath: string,
 ): PolicySeverity {
   const severity = asNonEmptyString(value, context, fieldPath);
-  if (!isPolicySeverity(severity)) {
+  if (!isOneOf(severity, supportedPolicySeverities)) {
     throw new HarnessConfigError(
       `${context.filePath}: ${fieldPath} must be one of: ${supportedPolicySeverities.join(", ")}.`,
     );
@@ -845,7 +942,7 @@ function asPolicyEngine(
   fieldPath: string,
 ): PolicyEngine {
   const engine = asNonEmptyString(value, context, fieldPath);
-  if (!isPolicyEngine(engine)) {
+  if (!isOneOf(engine, supportedPolicyEngines)) {
     throw new HarnessConfigError(
       `${context.filePath}: ${fieldPath} must be one of: ${supportedPolicyEngines.join(", ")}.`,
     );
@@ -860,7 +957,7 @@ function asPolicyRenderer(
   fieldPath: string,
 ): PolicyRenderer {
   const renderer = asNonEmptyString(value, context, fieldPath);
-  if (!isPolicyRenderer(renderer)) {
+  if (!isOneOf(renderer, supportedPolicyRenderers)) {
     throw new HarnessConfigError(
       `${context.filePath}: ${fieldPath} must be one of: ${supportedPolicyRenderers.join(", ")}.`,
     );
@@ -870,21 +967,28 @@ function asPolicyRenderer(
 }
 
 function asRelativePath(value: unknown, context: ValidationContext, fieldPath: string): string {
-  const relativePath = asNonEmptyString(value, context, fieldPath);
+  const rawPath = asNonEmptyString(value, context, fieldPath);
 
-  if (relativePath.includes("\\")) {
+  if (rawPath.includes("\\")) {
     throw new HarnessConfigError(
       `${context.filePath}: ${fieldPath} must use POSIX-style forward slashes.`,
     );
   }
 
-  if (path.isAbsolute(relativePath) || posix.isAbsolute(relativePath)) {
-    throw new HarnessConfigError(`${context.filePath}: ${fieldPath} must be relative.`);
+  if (path.isAbsolute(rawPath) || posix.isAbsolute(rawPath)) {
+    throw new HarnessConfigError(`${context.filePath}: ${fieldPath} must be a relative path.`);
   }
 
-  const normalized = posix.normalize(relativePath);
-  if (normalized === "." || normalized === ".." || normalized.startsWith("../")) {
-    throw new HarnessConfigError(`${context.filePath}: ${fieldPath} must stay within the project.`);
+  const normalized = posix.normalize(rawPath);
+  if (
+    normalized === "." ||
+    normalized === ".." ||
+    normalized.startsWith("../") ||
+    normalized.split("/").some((segment) => segment === "")
+  ) {
+    throw new HarnessConfigError(
+      `${context.filePath}: ${fieldPath} must be a normalized relative path that does not escape the project.`,
+    );
   }
 
   return normalized;
@@ -898,64 +1002,48 @@ function asBoolean(value: unknown, context: ValidationContext, fieldPath: string
   return value;
 }
 
-function expected(
-  context: ValidationContext,
-  fieldPath: string,
-  expectedType: string,
-): HarnessConfigError {
-  const article = /^[aeiou]/.test(expectedType) ? "an" : "a";
+function expected(context: ValidationContext, fieldPath: string, expectedType: string): Error {
   return new HarnessConfigError(
-    `${context.filePath}: ${fieldPath} must be ${article} ${expectedType}.`,
+    `${context.filePath}: ${fieldPath} must be ${article(expectedType)} ${expectedType}.`,
   );
 }
 
-function isSupportedStack(value: string): value is SupportedStack {
-  return (supportedStacks as readonly string[]).includes(value);
+function article(value: string): "a" | "an" {
+  return /^[aeiou]/i.test(value) ? "an" : "a";
 }
 
-function isPolicySeverity(value: string): value is PolicySeverity {
-  return (supportedPolicySeverities as readonly string[]).includes(value);
-}
-
-function isPolicyEngine(value: string): value is PolicyEngine {
-  return (supportedPolicyEngines as readonly string[]).includes(value);
-}
-
-function isPolicyRenderer(value: string): value is PolicyRenderer {
-  return (supportedPolicyRenderers as readonly string[]).includes(value);
+function isOneOf<T extends readonly string[]>(value: string, allowed: T): value is T[number] {
+  return (allowed as readonly string[]).includes(value);
 }
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {
   return typeof error === "object" && error !== null && "code" in error;
 }
 
-function sortRecord<T>(record: Record<string, T>): Record<string, T> {
-  return Object.fromEntries(
-    Object.entries(record).sort(([left], [right]) => left.localeCompare(right)),
-  );
+function displayPath(filePath: string, relativeTo: string): string {
+  const relative = path.relative(relativeTo, filePath).replaceAll(path.sep, "/");
+  return relative.startsWith("..") ? filePath : relative;
 }
 
 function sortObjectKeys(value: unknown): unknown {
   if (Array.isArray(value)) {
-    return value.map((item) => sortObjectKeys(item));
+    return value.map(sortObjectKeys);
   }
 
   if (typeof value !== "object" || value === null) {
     return value;
   }
 
+  const record = value as Record<string, unknown>;
   return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>)
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([key, objectValue]) => [key, sortObjectKeys(objectValue)]),
+    Object.keys(record)
+      .sort()
+      .map((key) => [key, sortObjectKeys(record[key])]),
   );
 }
 
-function displayPath(filePath: string, baseDir: string): string {
-  const relativePath = path.relative(baseDir, filePath);
-  if (relativePath === "" || relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
-    return filePath;
-  }
-
-  return relativePath.split(path.sep).join("/");
+function sortRecord<T>(record: Record<string, T>): Record<string, T> {
+  return Object.fromEntries(
+    Object.entries(record).sort(([left], [right]) => left.localeCompare(right)),
+  );
 }
