@@ -3,6 +3,9 @@ boundaries:
   - name: cli
     path: "src/cli.ts"
     public_api: "src/cli.ts"
+  - name: api
+    path: "src/index.ts"
+    public_api: "src/index.ts"
   - name: init
     path: "src/init"
     public_api: "src/init"
@@ -40,6 +43,12 @@ allowed_dependencies:
     - io
     - integrations
     - checks
+  api:
+    - init
+    - model
+    - render
+    - diagnostics
+    - io
   init:
     - model
     - render

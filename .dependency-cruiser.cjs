@@ -3,6 +3,127 @@
 module.exports = {
   "forbidden": [
     {
+      "comment": "api does not declare checks as an allowed boundary dependency.",
+      "from": {
+        "path": "^src/index\\.ts(?:/|$)"
+      },
+      "name": "architect-companion/cli.layer-boundaries/api-to-checks/undeclared-dependency",
+      "severity": "error",
+      "to": {
+        "path": "^src/checks(?:/|$)"
+      }
+    },
+    {
+      "comment": "api does not declare cli as an allowed boundary dependency.",
+      "from": {
+        "path": "^src/index\\.ts(?:/|$)"
+      },
+      "name": "architect-companion/cli.layer-boundaries/api-to-cli/undeclared-dependency",
+      "severity": "error",
+      "to": {
+        "path": "^src/cli\\.ts(?:/|$)"
+      }
+    },
+    {
+      "comment": "api may depend on diagnostics only through src/diagnostics.",
+      "from": {
+        "path": "^src/index\\.ts(?:/|$)"
+      },
+      "name": "architect-companion/cli.layer-boundaries/api-to-diagnostics/internal-import",
+      "severity": "error",
+      "to": {
+        "path": "^$"
+      }
+    },
+    {
+      "comment": "api may depend on init only through src/init.",
+      "from": {
+        "path": "^src/index\\.ts(?:/|$)"
+      },
+      "name": "architect-companion/cli.layer-boundaries/api-to-init/internal-import",
+      "severity": "error",
+      "to": {
+        "path": "^$"
+      }
+    },
+    {
+      "comment": "api does not declare integrations as an allowed boundary dependency.",
+      "from": {
+        "path": "^src/index\\.ts(?:/|$)"
+      },
+      "name": "architect-companion/cli.layer-boundaries/api-to-integrations/undeclared-dependency",
+      "severity": "error",
+      "to": {
+        "path": "^src/integrations(?:/|$)"
+      }
+    },
+    {
+      "comment": "api may depend on io only through src/io.",
+      "from": {
+        "path": "^src/index\\.ts(?:/|$)"
+      },
+      "name": "architect-companion/cli.layer-boundaries/api-to-io/internal-import",
+      "severity": "error",
+      "to": {
+        "path": "^$"
+      }
+    },
+    {
+      "comment": "api may depend on model only through src/model.",
+      "from": {
+        "path": "^src/index\\.ts(?:/|$)"
+      },
+      "name": "architect-companion/cli.layer-boundaries/api-to-model/internal-import",
+      "severity": "error",
+      "to": {
+        "path": "^$"
+      }
+    },
+    {
+      "comment": "api may depend on render only through src/render.",
+      "from": {
+        "path": "^src/index\\.ts(?:/|$)"
+      },
+      "name": "architect-companion/cli.layer-boundaries/api-to-render/internal-import",
+      "severity": "error",
+      "to": {
+        "path": "^$"
+      }
+    },
+    {
+      "comment": "api does not declare renderers as an allowed boundary dependency.",
+      "from": {
+        "path": "^src/index\\.ts(?:/|$)"
+      },
+      "name": "architect-companion/cli.layer-boundaries/api-to-renderers/undeclared-dependency",
+      "severity": "error",
+      "to": {
+        "path": "^src/renderers(?:/|$)"
+      }
+    },
+    {
+      "comment": "api does not declare targets as an allowed boundary dependency.",
+      "from": {
+        "path": "^src/index\\.ts(?:/|$)"
+      },
+      "name": "architect-companion/cli.layer-boundaries/api-to-targets/undeclared-dependency",
+      "severity": "error",
+      "to": {
+        "path": "^src/targets(?:/|$)"
+      }
+    },
+    {
+      "comment": "checks does not declare api as an allowed boundary dependency.",
+      "from": {
+        "path": "^src/checks(?:/|$)"
+      },
+      "name": "architect-companion/cli.layer-boundaries/checks-to-api/undeclared-dependency",
+      "severity": "error",
+      "to": {
+        "path": "^src/index\\.ts(?:/|$)"
+      }
+    },
+    {
       "comment": "checks does not declare cli as an allowed boundary dependency.",
       "from": {
         "path": "^src/checks(?:/|$)"
@@ -99,6 +220,17 @@ module.exports = {
       "severity": "error",
       "to": {
         "path": "^src/targets(?:/|$)"
+      }
+    },
+    {
+      "comment": "cli does not declare api as an allowed boundary dependency.",
+      "from": {
+        "path": "^src/cli\\.ts(?:/|$)"
+      },
+      "name": "architect-companion/cli.layer-boundaries/cli-to-api/undeclared-dependency",
+      "severity": "error",
+      "to": {
+        "path": "^src/index\\.ts(?:/|$)"
       }
     },
     {
@@ -201,6 +333,17 @@ module.exports = {
       }
     },
     {
+      "comment": "diagnostics does not declare api as an allowed boundary dependency.",
+      "from": {
+        "path": "^src/diagnostics(?:/|$)"
+      },
+      "name": "architect-companion/cli.layer-boundaries/diagnostics-to-api/undeclared-dependency",
+      "severity": "error",
+      "to": {
+        "path": "^src/index\\.ts(?:/|$)"
+      }
+    },
+    {
       "comment": "diagnostics may depend on checks only through src/checks.",
       "from": {
         "path": "^src/diagnostics(?:/|$)"
@@ -297,6 +440,17 @@ module.exports = {
       "severity": "error",
       "to": {
         "path": "^src/targets(?:/|$)"
+      }
+    },
+    {
+      "comment": "init does not declare api as an allowed boundary dependency.",
+      "from": {
+        "path": "^src/init(?:/|$)"
+      },
+      "name": "architect-companion/cli.layer-boundaries/init-to-api/undeclared-dependency",
+      "severity": "error",
+      "to": {
+        "path": "^src/index\\.ts(?:/|$)"
       }
     },
     {
@@ -399,6 +553,17 @@ module.exports = {
       }
     },
     {
+      "comment": "integrations does not declare api as an allowed boundary dependency.",
+      "from": {
+        "path": "^src/integrations(?:/|$)"
+      },
+      "name": "architect-companion/cli.layer-boundaries/integrations-to-api/undeclared-dependency",
+      "severity": "error",
+      "to": {
+        "path": "^src/index\\.ts(?:/|$)"
+      }
+    },
+    {
       "comment": "integrations does not declare checks as an allowed boundary dependency.",
       "from": {
         "path": "^src/integrations(?:/|$)"
@@ -495,6 +660,17 @@ module.exports = {
       "severity": "error",
       "to": {
         "path": "^src/targets(?:/|$)"
+      }
+    },
+    {
+      "comment": "io does not declare api as an allowed boundary dependency.",
+      "from": {
+        "path": "^src/io(?:/|$)"
+      },
+      "name": "architect-companion/cli.layer-boundaries/io-to-api/undeclared-dependency",
+      "severity": "error",
+      "to": {
+        "path": "^src/index\\.ts(?:/|$)"
       }
     },
     {
@@ -597,6 +773,17 @@ module.exports = {
       }
     },
     {
+      "comment": "model does not declare api as an allowed boundary dependency.",
+      "from": {
+        "path": "^src/model(?:/|$)"
+      },
+      "name": "architect-companion/cli.layer-boundaries/model-to-api/undeclared-dependency",
+      "severity": "error",
+      "to": {
+        "path": "^src/index\\.ts(?:/|$)"
+      }
+    },
+    {
       "comment": "model does not declare checks as an allowed boundary dependency.",
       "from": {
         "path": "^src/model(?:/|$)"
@@ -693,6 +880,17 @@ module.exports = {
       "severity": "error",
       "to": {
         "path": "^$"
+      }
+    },
+    {
+      "comment": "render does not declare api as an allowed boundary dependency.",
+      "from": {
+        "path": "^src/render(?:/|$)"
+      },
+      "name": "architect-companion/cli.layer-boundaries/render-to-api/undeclared-dependency",
+      "severity": "error",
+      "to": {
+        "path": "^src/index\\.ts(?:/|$)"
       }
     },
     {
@@ -795,6 +993,17 @@ module.exports = {
       }
     },
     {
+      "comment": "renderers does not declare api as an allowed boundary dependency.",
+      "from": {
+        "path": "^src/renderers(?:/|$)"
+      },
+      "name": "architect-companion/cli.layer-boundaries/renderers-to-api/undeclared-dependency",
+      "severity": "error",
+      "to": {
+        "path": "^src/index\\.ts(?:/|$)"
+      }
+    },
+    {
       "comment": "renderers may depend on checks only through src/checks.",
       "from": {
         "path": "^src/renderers(?:/|$)"
@@ -891,6 +1100,17 @@ module.exports = {
       "severity": "error",
       "to": {
         "path": "^$"
+      }
+    },
+    {
+      "comment": "targets does not declare api as an allowed boundary dependency.",
+      "from": {
+        "path": "^src/targets(?:/|$)"
+      },
+      "name": "architect-companion/cli.layer-boundaries/targets-to-api/undeclared-dependency",
+      "severity": "error",
+      "to": {
+        "path": "^src/index\\.ts(?:/|$)"
       }
     },
     {

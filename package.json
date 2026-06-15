@@ -4,6 +4,13 @@
   "description": "An opinionated architecture harness for agentic engineering.",
   "license": "MIT",
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
   "bin": {
     "architect-companion": "./dist/cli.js"
   },

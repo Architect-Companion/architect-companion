@@ -51,7 +51,7 @@ export class ProfileLockError extends Error {
   }
 }
 
-type ResolveProfileLockOptions = {
+export type ResolveProfileLockOptions = {
   model: EffectiveHarnessModel;
   profilesDir: string;
   projectDir: string;

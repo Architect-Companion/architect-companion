@@ -23,7 +23,7 @@ export type MissingTool = {
   reason: string;
 };
 
-type RunDoctorOptions = {
+export type RunDoctorOptions = {
   model: EffectiveHarnessModel;
   profilesDir: string;
   projectDir: string;

@@ -54,6 +54,9 @@ Core business logic modules must not import from the CLI argument parser, standa
 
 ## Boundaries
 
+- api: src/index.ts
+  Public API: src/index.ts
+  Allowed dependencies: diagnostics, init, io, model, render
 - checks: src/checks
   Public API: src/checks
   Allowed dependencies: integrations, model

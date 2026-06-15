@@ -24,4 +24,4 @@ jobs:
       - name: Verify generated architecture targets
         run: npx --no-install architect-companion render --check
       - name: Run dependency-cruiser architecture checks
-        run: npx --no-install depcruise --config .dependency-cruiser.cjs src/checks src/cli.ts src/diagnostics src/init src/integrations src/io src/model src/render src/renderers src/targets
+        run: npx --no-install depcruise --config .dependency-cruiser.cjs src/checks src/cli.ts src/diagnostics src/index.ts src/init src/integrations src/io src/model src/render src/renderers src/targets

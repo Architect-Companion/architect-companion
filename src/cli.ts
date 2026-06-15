@@ -5,6 +5,7 @@ import { basename, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { computeCapabilityWarnings } from "./diagnostics/capability-warnings.js";
+import { defaultProfilesDir } from "./io/profiles-dir.js";
 import { doctorReportHasIssues, formatDoctorReport, runDoctor } from "./diagnostics/doctor.js";
 import { InitError, runInit } from "./init/init.js";
 import { assertHarnessDirectoryAbsent } from "./init/preflight.js";
@@ -902,8 +903,4 @@ function parseFlagValue(
     success: true,
     value,
   };
-}
-
-function defaultProfilesDir(): string {
-  return fileURLToPath(new URL("../profiles", import.meta.url));
 }

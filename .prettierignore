@@ -4,3 +4,5 @@ AGENTS.md
 CLAUDE.md
 .cursor/rules/architect-companion.mdc
 .github/workflows/architecture.yml
+.tasks/
+packages/
