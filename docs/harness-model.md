@@ -8,7 +8,9 @@ Architect Companion should be agent-neutral at its core.
 
 The repository-specific harness instance lives in `.architect-companion/`. Reusable architectural knowledge lives in `profiles/`. Together, those inputs produce the effective harness model that renderers and checks consume.
 
-Architect Companion then renders the effective harness model into target-specific integrations such as `AGENTS.md`, `CLAUDE.md`, Cursor rules, Copilot instructions, Codex hooks, Claude Code commands, MCP prompts, and CI workflows.
+Architect Companion currently renders the effective harness model into `AGENTS.md`, `CLAUDE.md`, Cursor rules, `.dependency-cruiser.cjs`, and a GitHub Actions architecture workflow.
+
+The same source/target model is intended to support future targets such as Copilot instructions, Codex hooks, Claude Code commands, MCP prompts, and additional CI systems.
 
 In short:
 
@@ -84,18 +86,24 @@ Reusable architectural knowledge, such as the defaults for a good modular monoli
 
 ## Generated Targets
 
-The renderer can generate or update files such as:
+The renderer can currently generate or update:
 
 ```text
 AGENTS.md
 CLAUDE.md
-.cursor/rules/*.mdc
+.cursor/rules/architect-companion.mdc
+.dependency-cruiser.cjs
+.github/workflows/architecture.yml
+```
+
+Future render targets may include:
+
+```text
 .github/copilot-instructions.md
 .codex/config.toml
 .codex/hooks.json
 .claude/settings.json
 .claude/commands/*.md
-.github/workflows/architect-companion.yml
 ```
 
 Generated files should be treated as adapters. They should contain only what the target tool needs in the shape that tool understands.
@@ -106,35 +114,37 @@ Rendering should be deterministic and should not use AI. See [Rendering And Chec
 
 ## CLI Shape
 
-The first CLI should make the source/target split obvious:
+The CLI currently makes the source/target split explicit:
 
 ```bash
 architect-companion init
+architect-companion inspect effective-model
 architect-companion render
 architect-companion render --check
-architect-companion review
 architect-companion doctor
-architect-companion explain
+architect-companion upgrade-profile
 ```
 
-Possible meanings:
+Current meanings:
 
 - `init`: scaffold `.architect-companion/` from selected profiles and render the enabled targets in a single atomic transaction. See [Init Command](init.md).
+- `inspect effective-model`: validate the harness inputs and print the resolved effective model as JSON.
 - `render`: generate target-specific files from the effective harness model.
 - `render --check`: fail when generated targets would change, without writing anything.
-- `review`: review a diff against the harness model.
-- `doctor`: show active targets, missing files, stale generated outputs, and unsupported integrations.
-- `explain`: print relevant harness context for manual use in any agent.
+- `doctor`: show profile lock status, missing external tools, and capability warnings.
+- `upgrade-profile`: rewrite the profile lock after profile changes have been reviewed.
 
 External analysis tools (dependency-cruiser, Semgrep, ArchUnit, etc.) are not invoked through a dedicated Architect Companion command. `render` writes their configuration and the matching CI step; the CI runner executes them.
 
-Later, the same model can be exposed through:
+Later, the same model can support advisory or agent-facing commands such as:
 
 ```bash
+architect-companion review
+architect-companion explain
 architect-companion mcp serve
 ```
 
-That would let agents access architecture resources, workflows, and checks through MCP when supported.
+Those would let users review diffs against the harness, print harness context for manual use, or expose architecture resources, workflows, and checks through MCP when supported.
 
 ## User Flow
 
@@ -154,10 +164,11 @@ failure modes.
 After init, the user keeps working with their preferred tools:
 
 - Cursor reads Cursor rules or `AGENTS.md`.
-- Claude Code reads Claude-specific commands, settings, or instructions.
-- Codex reads `AGENTS.md`, Codex config, hooks, or MCP.
-- Copilot reads custom instructions.
+- Claude Code can read `CLAUDE.md`.
+- Codex reads `AGENTS.md`.
 - CI runs `architect-companion render --check` and any selected analysis engines as separate steps.
+
+Future renderers may add Copilot custom instructions, Codex config/hooks, Claude Code commands/settings, and MCP resources.
 
 Developers do not have to change their preferred agent for the harness to be useful.
 

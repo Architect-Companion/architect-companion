@@ -154,6 +154,11 @@ profiles/
   frontend-application/
 ```
 
+The current schema-backed project metadata is focused on boundaries and
+`allowed_dependencies`. Components, ownership, risks, exceptions, and richer
+metadata files are roadmap items unless they are expressed today as profile
+guidance, policies, heuristics, or examples.
+
 See [Profile Model](profile-model.md) for how reusable profiles and project-specific harness instances relate.
 
 ## Product Implication

@@ -54,7 +54,7 @@ Only deterministic code can render .architect-companion/ into targets.
 
 Architect Companion needs multiple renderers because teams use different agents, editors, and CI systems.
 
-Examples:
+Implemented renderers today:
 
 ```text
 effective harness model
@@ -62,13 +62,12 @@ effective harness model
         +--> AGENTS.md renderer
         +--> CLAUDE.md renderer
         +--> Cursor rules renderer
-        +--> Copilot instructions renderer
-        +--> Claude Code hooks and commands renderer
-        +--> Codex hooks and config renderer
         +--> GitHub Actions renderer
-        +--> GitLab CI renderer
-        +--> MCP config and prompt renderer
+        +--> dependency-cruiser config renderer
 ```
+
+Future renderers may add Copilot instructions, Claude Code hooks and commands,
+Codex hooks and config, GitLab CI, or MCP resources.
 
 Renderers should encode target mechanics, not architectural taste.
 
@@ -76,7 +75,7 @@ For example:
 
 - the modular monolith profile says which module boundaries matter
 - the Cursor renderer expresses that guidance as Cursor rules
-- the Claude Code renderer expresses it as Claude-specific commands or hooks
+- a future Claude Code renderer could express it as Claude-specific commands or hooks
 - the GitHub Actions renderer expresses enforcement as CI steps
 
 The profile owns the architectural intent. The renderer owns the target format.
@@ -96,8 +95,8 @@ Generated files are projections:
 ```text
 AGENTS.md
 CLAUDE.md
-.cursor/rules/*.mdc
-.github/copilot-instructions.md
+.cursor/rules/architect-companion.mdc
+.dependency-cruiser.cjs
 .github/workflows/architecture.yml
 ```
 
@@ -121,15 +120,17 @@ Renderers support full-file generation for `AGENTS.md`, `CLAUDE.md`, Cursor rule
 
 CI configuration should be rendered from the harness.
 
-For example, GitHub Actions or GitLab CI files should be generated as platform-specific adapters. They should not contain independent copies of the architecture logic.
+Today the implemented CI adapter is GitHub Actions. Future CI adapters, such as
+GitLab CI, should follow the same platform-specific adapter model and should not
+contain independent copies of the architecture logic.
 
 Preferred model:
 
 ```text
 architect-companion render
   -> generates GitHub Actions workflow
-  -> generates GitLab CI job
   -> generates external tool config
+  -> may later generate additional CI jobs
 
 CI platform
   -> runs the generated workflow

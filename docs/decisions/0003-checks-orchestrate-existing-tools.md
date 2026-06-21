@@ -23,7 +23,7 @@ render -> tool config + CI step
 CI runner -> invokes the tool -> tool exits non-zero on violations
 ```
 
-Architect Companion itself does not orchestrate engines at runtime or normalize their output. Each engine reports its own pass/fail through its own CI step.
+Architect Companion's deterministic enforcement path does not orchestrate engines at runtime or consume normalized engine output. Each engine reports its own pass/fail through its own CI step.
 
 Harness-owned verification is limited to `architect-companion render --check`, which detects stale generated targets.
 

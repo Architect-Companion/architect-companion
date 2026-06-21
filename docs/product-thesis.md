@@ -21,6 +21,12 @@ The harness should package opinionated defaults across several layers:
 - CI integration for pull request review and enforcement
 - adapter layers for MCP, hooks, skills, slash commands, and plugins
 
+The current implementation is a narrower foundation slice: `AGENTS.md`,
+`CLAUDE.md`, Cursor rules, dependency-cruiser config, GitHub Actions workflow,
+boundary metadata, selected profiles, profile locking, and doctor diagnostics.
+Copilot instructions, MCP, hooks, slash commands, plugins, and richer
+component/ownership/risk/exception schemas are roadmap items.
+
 The canonical source should be a tool-independent harness model, not an agent-specific configuration file. See [Harness Model](harness-model.md) for the current source/target design.
 
 Architectural knowledge should be encoded in reusable profiles, policies, workflows, review heuristics, examples, and target renderers. See [Architecture Knowledge](architecture-knowledge.md) for the current model.

@@ -83,7 +83,7 @@ See [`docs/init.md`](docs/init.md) for the full contract.
 4. Refuse to overwrite any file that does not carry the marker.
 
 `architect-companion doctor` reports adoption diagnostics (profile lock status,
-capability warnings for selected-but-unsupported targets, missing tools).
+missing tools, and capability warnings for target and implementation gaps).
 `architect-companion upgrade-profile` rewrites the profile lock to the
 currently resolved profiles.
 
@@ -150,8 +150,8 @@ Adding an external-engine integration:
 Adding a target key:
 
 1. Add the key to `src/targets/target-registry.ts`.
-2. Either provide a renderer or accept that the target is declared but not yet
-   renderable; the render path will report unsupported selections.
+2. Provide a renderer and bind it from the render layer before shipping the key.
+   The render path asserts that every known target has a renderer.
 
 ## Repository Layout
 
