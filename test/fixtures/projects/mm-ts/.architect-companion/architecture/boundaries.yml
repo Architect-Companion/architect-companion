@@ -1,0 +1,16 @@
+schemaVersion: 1
+boundaries:
+  - name: billing
+    path: src/modules/billing
+    public_api: src/modules/billing/index.ts
+  - name: catalog
+    path: src/modules/catalog
+    public_api: src/modules/catalog/index.ts
+  - name: identity
+    path: src/modules/identity
+    public_api: src/modules/identity/index.ts
+allowed_dependencies:
+  billing:
+    - identity
+  catalog:
+    - identity

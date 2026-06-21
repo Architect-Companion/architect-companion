@@ -1,0 +1,11 @@
+schemaVersion: 1
+boundaries:
+  - name: billing
+    path: src/modules/billing
+    public_api: src/modules/billing/index.ts
+  - name: cli
+    path: src/cli
+    public_api: src/cli/index.ts
+allowed_dependencies:
+  cli:
+    - billing

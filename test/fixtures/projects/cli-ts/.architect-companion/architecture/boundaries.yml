@@ -1,0 +1,18 @@
+schemaVersion: 1
+boundaries:
+  - name: cli
+    path: src/cli
+    public_api: src/cli/index.ts
+  - name: core
+    path: src/core
+    public_api: src/core/index.ts
+  - name: io
+    path: src/io
+    public_api: src/io/index.ts
+allowed_dependencies:
+  cli:
+    - core
+    - io
+  core:
+    - io
+  io: []
