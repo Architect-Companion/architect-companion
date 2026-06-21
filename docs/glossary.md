@@ -47,7 +47,10 @@ A deterministic adapter that converts the effective harness model into a target-
 
 An agent, tool, or platform integration that can receive rendered output.
 
-Examples:
+Implemented target keys today are `agentsMd`, `claudeMd`, `cursor`,
+`dependencyCruiser`, and `githubActions`.
+
+Possible target examples:
 
 - `AGENTS.md`
 - `CLAUDE.md`
@@ -152,7 +155,10 @@ Command metadata can include the executable, arguments, generated config file, i
 
 ## Orchestrator
 
-The part of Architect Companion that invokes selected engines, collects results, and normalizes output.
+A future advisory component that could invoke selected engines, collect results,
+and normalize output. Architect Companion's deterministic enforcement path does
+not currently orchestrate engines at runtime; rendered CI steps invoke external
+engines directly.
 
 ## Fitness Function
 

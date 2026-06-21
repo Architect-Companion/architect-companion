@@ -8,13 +8,13 @@ Architect Companion is an opinionated harness for architecture-aware agentic sof
 
 It provides reusable instructions, workflows, architecture metadata, and checks that help AI-assisted development follow a team's architectural standards.
 
-## What It Provides
+## What It Provides Today
 
-- Agent instruction templates such as `AGENTS.md`, `CLAUDE.md`, Cursor rules, and Copilot instructions.
-- Architecture metadata for boundaries, components, ownership, risks, and exceptions.
-- Reusable workflows for planning, implementation, review, refactoring, dependency changes, and ADR creation.
-- Executable checks that can run locally and in CI.
-- Adapter layers for MCP, hooks, skills, slash commands, and plugins.
+- Deterministic renderers for `AGENTS.md`, `CLAUDE.md`, Cursor rules, `.dependency-cruiser.cjs`, and `.github/workflows/architecture.yml`.
+- A harness model that composes reusable profiles with project languages, boundary metadata, allowed dependencies, and target selection.
+- Reusable profile content: principles, policies, workflows, review heuristics, examples, and policy implementation metadata.
+- Executable verification through `architect-companion render --check` plus rendered dependency-cruiser and GitHub Actions integration.
+- Adoption diagnostics with `architect-companion doctor` and an explicit profile lock plus `upgrade-profile` workflow.
 
 ## Development
 

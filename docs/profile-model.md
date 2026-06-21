@@ -115,16 +115,22 @@ implementations:
     renderer: dependency-cruiser-config
 ```
 
-An implementation is active only when:
+An implementation appears in the effective model only when:
 
 - the implementation's source profile is selected
 - the referenced policy's source profile is selected
 - `project.languages` contains the implementation language
-- the relevant target is selected when rendering or checking
+- the referenced policy exists
+
+Target selection does not determine whether an implementation appears in the
+effective model. Targets determine whether the corresponding config files and CI
+steps are rendered. Capability warnings report gaps such as an enforceable
+dependency-cruiser implementation without the `dependencyCruiser` target, or a
+selected `dependencyCruiser` target without a matching implementation.
 
 Implementations that reference unselected policies or inactive languages are
-ignored. Active implementations that reference a selected but missing policy
-fail model resolution.
+ignored. Implementations that reference a selected but missing policy fail model
+resolution.
 
 ## Why This Split
 
