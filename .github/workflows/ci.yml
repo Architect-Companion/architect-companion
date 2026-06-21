@@ -33,3 +33,6 @@ jobs:
 
       - name: Run checks
         run: npm run check
+
+      - name: Run end-to-end binary smoke test
+        run: npm run test:e2e

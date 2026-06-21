@@ -4,3 +4,6 @@ AGENTS.md
 CLAUDE.md
 .cursor/rules/architect-companion.mdc
 .github/workflows/architecture.yml
+
+# Golden artifacts are byte-exact renderer output; Prettier must never rewrite them.
+test/fixtures/golden/

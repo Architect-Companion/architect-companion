@@ -1,0 +1,13 @@
+schemaVersion: 1
+profiles:
+  - name: modular-monolith
+    version: 0.2.0
+  - name: typescript
+    version: 0.1.0
+project:
+  name: monolith-sample
+  languages:
+    - typescript
+boundaries: architecture/boundaries.yml
+targets:
+  agentsMd: true

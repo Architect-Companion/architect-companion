@@ -26,7 +26,9 @@
     "lint": "eslint .",
     "prepare": "npm run build",
     "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "test:e2e": "npm run build && vitest run --config vitest.e2e.config.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "update:goldens": "vitest run -u"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

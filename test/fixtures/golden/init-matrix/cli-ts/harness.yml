@@ -1,0 +1,13 @@
+schemaVersion: 1
+profiles:
+  - name: cli
+    version: 0.1.0
+  - name: typescript
+    version: 0.1.0
+project:
+  name: cli-sample
+  languages:
+    - typescript
+boundaries: architecture/boundaries.yml
+targets:
+  agentsMd: true
