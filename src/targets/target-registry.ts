@@ -34,6 +34,14 @@ export const targetRegistry = [
     label: "GitHub Actions",
     outputs: [{ outputPath: ".github/workflows/architecture.yml" }],
   },
+  {
+    key: "prAgent",
+    label: "PR-Agent review",
+    outputs: [
+      { outputPath: ".pr_agent.toml" },
+      { outputPath: ".github/workflows/pr-agent-review.yml" },
+    ],
+  },
 ] as const satisfies readonly TargetMetadata[];
 
 export type KnownTargetKey = (typeof targetRegistry)[number]["key"];

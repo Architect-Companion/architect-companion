@@ -21,21 +21,35 @@ export type RenderCombo = {
 // not yet supported by the renderer (see the negative test in render-matrix).
 export const renderCombos: RenderCombo[] = [
   {
-    enabledTargets: ["agentsMd", "claudeMd", "cursor", "dependencyCruiser", "githubActions"],
+    enabledTargets: [
+      "agentsMd",
+      "claudeMd",
+      "cursor",
+      "dependencyCruiser",
+      "githubActions",
+      "prAgent",
+    ],
     fixtureDir: fileURLToPath(new URL("../fixtures/projects/cli-ts", import.meta.url)),
     profiles: ["cli", "typescript"],
     projectName: "cli-sample",
     slug: "cli-ts",
   },
   {
-    enabledTargets: ["agentsMd", "claudeMd", "cursor", "dependencyCruiser", "githubActions"],
+    enabledTargets: [
+      "agentsMd",
+      "claudeMd",
+      "cursor",
+      "dependencyCruiser",
+      "githubActions",
+      "prAgent",
+    ],
     fixtureDir: fileURLToPath(new URL("../fixtures/projects/mm-ts", import.meta.url)),
     profiles: ["modular-monolith", "typescript"],
     projectName: "monolith-sample",
     slug: "mm-ts",
   },
   {
-    enabledTargets: ["agentsMd", "claudeMd", "cursor", "githubActions"],
+    enabledTargets: ["agentsMd", "claudeMd", "cursor", "githubActions", "prAgent"],
     fixtureDir: fileURLToPath(new URL("../fixtures/projects/cli-mm-ts", import.meta.url)),
     profiles: ["cli", "modular-monolith", "typescript"],
     projectName: "composed-sample",

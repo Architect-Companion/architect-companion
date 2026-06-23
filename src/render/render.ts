@@ -10,6 +10,7 @@ import {
   renderCursorRules,
 } from "../renderers/agent-instructions.js";
 import { renderGitHubActionsWorkflow } from "../renderers/github-actions.js";
+import { renderPrAgentTarget } from "../renderers/pr-agent.js";
 import { getTargetMetadata, knownTargetKeys } from "../targets/target-registry.js";
 import { GENERATED_FILE_MARKER } from "./generated-file.js";
 
@@ -21,6 +22,7 @@ const targetRenderers = [
   createTargetRenderer("cursor", renderCursorRules),
   createTargetRenderer("dependencyCruiser", renderDependencyCruiserConfig),
   createTargetRenderer("githubActions", (model) => renderGitHubActionsWorkflow(model).contents),
+  { render: (model) => renderPrAgentTarget(model), target: "prAgent" },
 ] satisfies TargetRenderer[];
 
 assertEveryKnownTargetHasRenderer(targetRenderers);

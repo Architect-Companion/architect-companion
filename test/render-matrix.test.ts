@@ -17,7 +17,9 @@ describe("render golden matrix", () => {
         const model = await loadEffectiveHarnessModel({ profilesDir, projectDir });
         const results = await renderEffectiveHarnessModel({ model, projectDir });
 
-        expect(results.map((result) => result.target).sort()).toEqual(
+        // A target may emit more than one output (e.g. prAgent renders both a
+        // config and a workflow), so compare the distinct rendered targets.
+        expect([...new Set(results.map((result) => result.target))].sort()).toEqual(
           [...combo.enabledTargets].sort(),
         );
         expect(results.every((result) => result.status === "created")).toBe(true);
