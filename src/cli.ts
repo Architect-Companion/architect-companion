@@ -334,7 +334,7 @@ async function runRenderCommand(args: string[], io: CliIo, options: CliOptions):
             {
               fresh,
               lockFile: { status: lockMissing ? "stale" : "fresh" },
-              results: staleResults.map(formatRenderResultEntry),
+              results: staleResults,
               warnings: capabilityWarnings.map((w) => w.message),
             },
             null,
@@ -365,7 +365,7 @@ async function runRenderCommand(args: string[], io: CliIo, options: CliOptions):
         JSON.stringify(
           {
             lockFile: { status: lockMissing ? "created" : "fresh" },
-            results: results.map(formatRenderResultEntry),
+            results,
             warnings: capabilityWarnings.map((w) => w.message),
           },
           null,
@@ -470,7 +470,7 @@ async function runUpgradeProfileCommand(
 
     await writeProfileLock(parsedOptions.options.projectDir, lockStatus.expected);
 
-    const profiles = lockStatus.expected.profiles.map(({ name, version }) => ({ name, version }));
+    const profiles = lockStatus.expected.profiles;
 
     switch (lockStatus.kind) {
       case "missing":
@@ -493,10 +493,7 @@ async function runUpgradeProfileCommand(
         return 0;
       case "stale": {
         if (format === "json") {
-          const previousProfiles = lockStatus.lock.profiles.map(({ name, version }) => ({
-            name,
-            version,
-          }));
+          const previousProfiles = lockStatus.lock.profiles;
           io.stdout.write(
             JSON.stringify({ action: "upgraded", previousProfiles, profiles }, null, 2) + "\n",
           );
@@ -532,41 +529,17 @@ function formatErrorAsJson(message: string): string {
   return JSON.stringify({ error: message }, null, 2) + "\n";
 }
 
-function formatRenderResultEntry(result: RenderResult): Record<string, unknown> {
-  const entry: Record<string, unknown> = {
-    outputPath: result.outputPath,
-    status: result.status,
-    target: result.target,
-  };
-  if (result.reason !== undefined) {
-    entry.reason = result.reason;
-  }
-  return entry;
-}
-
 function formatDoctorReportAsJson(report: DoctorReport): string {
   let profileLock: Record<string, unknown>;
 
   if (report.profileLock.kind === "match") {
-    profileLock = {
-      kind: "match",
-      profiles: report.profileLock.lock.profiles.map(({ name, version }) => ({ name, version })),
-    };
+    profileLock = { kind: "match", profiles: report.profileLock.lock.profiles };
   } else if (report.profileLock.kind === "missing") {
-    profileLock = {
-      expected: report.profileLock.expected.profiles.map(({ name, version }) => ({
-        name,
-        version,
-      })),
-      kind: "missing",
-    };
+    profileLock = { expected: report.profileLock.expected.profiles, kind: "missing" };
   } else {
     profileLock = {
-      current: report.profileLock.lock.profiles.map(({ name, version }) => ({ name, version })),
-      expected: report.profileLock.expected.profiles.map(({ name, version }) => ({
-        name,
-        version,
-      })),
+      current: report.profileLock.lock.profiles,
+      expected: report.profileLock.expected.profiles,
       kind: "stale",
       reason: report.profileLock.reason,
     };
@@ -575,16 +548,9 @@ function formatDoctorReportAsJson(report: DoctorReport): string {
   return (
     JSON.stringify(
       {
-        capabilityWarnings: report.capabilityWarnings.map(({ code, message }) => ({
-          code,
-          message,
-        })),
+        capabilityWarnings: report.capabilityWarnings,
         hasIssues: doctorReportHasIssues(report),
-        missingTools: report.missingTools.map(({ executable, hint, reason }) => ({
-          executable,
-          hint,
-          reason,
-        })),
+        missingTools: report.missingTools,
         profileLock,
       },
       null,
