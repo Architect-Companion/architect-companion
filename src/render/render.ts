@@ -9,6 +9,11 @@ import {
   renderClaudeMd,
   renderCursorRules,
 } from "../renderers/agent-instructions.js";
+import {
+  claudeHookScriptPaths,
+  CLAUDE_SETTINGS_PATH,
+  renderClaudeHooksTarget,
+} from "../renderers/claude-hooks.js";
 import { renderGitHubActionsWorkflow } from "../renderers/github-actions.js";
 import { renderPrAgentTarget } from "../renderers/pr-agent.js";
 import { getTargetMetadata, knownTargetKeys } from "../targets/target-registry.js";
@@ -23,9 +28,11 @@ const targetRenderers = [
   createTargetRenderer("dependencyCruiser", renderDependencyCruiserConfig),
   createTargetRenderer("githubActions", (model) => renderGitHubActionsWorkflow(model).contents),
   { render: (model) => renderPrAgentTarget(model), target: "prAgent" },
+  { render: (model) => renderClaudeHooksTarget(model), target: "claudeHooks" },
 ] satisfies TargetRenderer[];
 
 assertEveryKnownTargetHasRenderer(targetRenderers);
+assertClaudeHooksOutputsMatchCatalog();
 
 type RenderStatus = "created" | "stale" | "unchanged" | "updated";
 
@@ -177,6 +184,27 @@ function assertEveryKnownTargetHasRenderer(renderers: readonly TargetRenderer[])
   if (missing.length > 0) {
     throw new Error(
       `Architect Companion bug: no renderer registered for target(s) ${missing.join(", ")}. The target registry and render.ts are out of sync.`,
+    );
+  }
+}
+
+/**
+ * The Claude hooks catalog drives the rendered scripts, but the target registry
+ * is the static source of truth for output paths (used by `--check`, init
+ * pre-flight, and conflict detection). The `targets` boundary cannot import the
+ * renderer catalog, so this guards the two against drift: adding a hook means
+ * appending a catalog entry and its registry output, and this fails loudly if
+ * they fall out of sync.
+ */
+function assertClaudeHooksOutputsMatchCatalog(): void {
+  const declared = getTargetMetadata("claudeHooks").outputs.map((output) => output.outputPath);
+  const expected = [CLAUDE_SETTINGS_PATH, ...claudeHookScriptPaths()];
+  const inSync =
+    declared.length === expected.length &&
+    declared.every((outputPath, index) => outputPath === expected[index]);
+  if (!inSync) {
+    throw new Error(
+      `Architect Companion bug: claudeHooks registry outputs ${JSON.stringify(declared)} are out of sync with the hook catalog ${JSON.stringify(expected)}. Update src/targets/target-registry.ts to match the catalog in src/renderers/claude-hooks.ts.`,
     );
   }
 }

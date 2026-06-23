@@ -18,3 +18,4 @@ targets:
   dependencyCruiser: false
   githubActions: true
   prAgent: true
+  claudeHooks: true
