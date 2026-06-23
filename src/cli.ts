@@ -5,7 +5,12 @@ import { basename, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { computeCapabilityWarnings } from "./diagnostics/capability-warnings.js";
-import { doctorReportHasIssues, formatDoctorReport, runDoctor } from "./diagnostics/doctor.js";
+import {
+  doctorReportHasIssues,
+  formatDoctorReport,
+  runDoctor,
+  type DoctorReport,
+} from "./diagnostics/doctor.js";
 import { InitError, runInit } from "./init/init.js";
 import { assertHarnessDirectoryAbsent } from "./init/preflight.js";
 import { runInitWizard } from "./init/prompts.js";
@@ -37,9 +42,9 @@ Usage:
                            [--no-render] [--dry-run]
                            [--project <dir>] [--profiles <dir>]
   architect-companion inspect effective-model [--project <dir>] [--profiles <dir>]
-  architect-companion render [--project <dir>] [--profiles <dir>] [--check]
-  architect-companion doctor [--project <dir>] [--profiles <dir>]
-  architect-companion upgrade-profile [--project <dir>] [--profiles <dir>]
+  architect-companion render [--check] [--json] [--project <dir>] [--profiles <dir>]
+  architect-companion doctor [--json] [--project <dir>] [--profiles <dir>]
+  architect-companion upgrade-profile [--json] [--project <dir>] [--profiles <dir>]
 
 Options:
   -h, --help          Show this help message.
@@ -80,7 +85,10 @@ type CliOptions = {
 const helpFlags = new Set(["-h", "--help"]);
 const versionFlags = new Set(["-v", "--version"]);
 
+type OutputFormat = "json" | "text";
+
 type ResolvedDirectoryOptions = {
+  format: OutputFormat;
   profilesDir: string;
   projectDir: string;
 };
@@ -274,6 +282,8 @@ async function runRenderCommand(args: string[], io: CliIo, options: CliOptions):
     return 1;
   }
 
+  const { check, format } = parsedOptions.options;
+
   try {
     const model = await loadEffectiveHarnessModel(parsedOptions.options);
 
@@ -284,21 +294,31 @@ async function runRenderCommand(args: string[], io: CliIo, options: CliOptions):
     });
 
     if (lockStatus.kind === "stale") {
-      io.stderr.write(
-        `${PROFILE_LOCK_FILE_PATH}: ${describeProfileLockStaleReason(lockStatus)}.\n`,
-      );
-      io.stderr.write(
-        "Run `architect-companion upgrade-profile` after reviewing the profile changes.\n",
-      );
+      const staleSuffix = describeProfileLockStaleReason(lockStatus);
+      if (format === "json") {
+        io.stderr.write(
+          formatErrorAsJson(
+            `${PROFILE_LOCK_FILE_PATH}: ${staleSuffix}. Run \`architect-companion upgrade-profile\` after reviewing the profile changes.`,
+          ),
+        );
+      } else {
+        io.stderr.write(`${PROFILE_LOCK_FILE_PATH}: ${staleSuffix}.\n`);
+        io.stderr.write(
+          "Run `architect-companion upgrade-profile` after reviewing the profile changes.\n",
+        );
+      }
       return 1;
     }
 
-    for (const warning of computeCapabilityWarnings(model)) {
-      io.stderr.write(`warning: ${warning.message}\n`);
+    const capabilityWarnings = computeCapabilityWarnings(model);
+    if (format === "text") {
+      for (const warning of capabilityWarnings) {
+        io.stderr.write(`warning: ${warning.message}\n`);
+      }
     }
 
     const results = await renderEffectiveHarnessModel({
-      check: parsedOptions.options.check,
+      check,
       model,
       projectDir: parsedOptions.options.projectDir,
     });
@@ -306,20 +326,52 @@ async function runRenderCommand(args: string[], io: CliIo, options: CliOptions):
     const staleResults = results.filter((result) => result.status === "stale");
     const lockMissing = lockStatus.kind === "missing";
 
-    if (parsedOptions.options.check && lockMissing) {
-      io.stderr.write(`${PROFILE_LOCK_FILE_PATH} is stale (missing).\n`);
-    }
+    if (check) {
+      if (format === "json") {
+        const fresh = staleResults.length === 0 && !lockMissing;
+        io.stdout.write(
+          JSON.stringify(
+            {
+              fresh,
+              lockFile: { status: lockMissing ? "stale" : "fresh" },
+              results: staleResults,
+              warnings: capabilityWarnings.map((w) => w.message),
+            },
+            null,
+            2,
+          ) + "\n",
+        );
+        return fresh ? 0 : 1;
+      }
 
-    for (const result of staleResults) {
-      io.stderr.write(`${result.outputPath} is stale (${result.reason}).\n`);
-    }
-
-    if (parsedOptions.options.check) {
+      if (lockMissing) {
+        io.stderr.write(`${PROFILE_LOCK_FILE_PATH} is stale (missing).\n`);
+      }
+      for (const result of staleResults) {
+        io.stderr.write(`${result.outputPath} is stale (${result.reason}).\n`);
+      }
       if (staleResults.length > 0 || lockMissing) {
         return 1;
       }
-
       io.stdout.write("Generated targets are fresh.\n");
+      return 0;
+    }
+
+    if (format === "json") {
+      if (lockMissing) {
+        await writeProfileLock(parsedOptions.options.projectDir, lockStatus.expected);
+      }
+      io.stdout.write(
+        JSON.stringify(
+          {
+            lockFile: { status: lockMissing ? "created" : "fresh" },
+            results,
+            warnings: capabilityWarnings.map((w) => w.message),
+          },
+          null,
+          2,
+        ) + "\n",
+      );
       return 0;
     }
 
@@ -345,7 +397,11 @@ async function runRenderCommand(args: string[], io: CliIo, options: CliOptions):
       error instanceof RenderError ||
       error instanceof ProfileLockError
     ) {
-      io.stderr.write(`${error.message}\n`);
+      if (format === "json") {
+        io.stderr.write(formatErrorAsJson(error.message));
+      } else {
+        io.stderr.write(`${error.message}\n`);
+      }
       return 1;
     }
 
@@ -361,6 +417,8 @@ async function runDoctorCommand(args: string[], io: CliIo, options: CliOptions):
     return 1;
   }
 
+  const { format } = parsedOptions.options;
+
   try {
     const model = await loadEffectiveHarnessModel(parsedOptions.options);
     const report = await runDoctor({
@@ -368,11 +426,19 @@ async function runDoctorCommand(args: string[], io: CliIo, options: CliOptions):
       profilesDir: parsedOptions.options.profilesDir,
       projectDir: parsedOptions.options.projectDir,
     });
-    io.stdout.write(formatDoctorReport(report));
+    if (format === "json") {
+      io.stdout.write(formatDoctorReportAsJson(report));
+    } else {
+      io.stdout.write(formatDoctorReport(report));
+    }
     return doctorReportHasIssues(report) ? 1 : 0;
   } catch (error: unknown) {
     if (error instanceof HarnessConfigError || error instanceof ProfileLockError) {
-      io.stderr.write(`${error.message}\n`);
+      if (format === "json") {
+        io.stderr.write(formatErrorAsJson(error.message));
+      } else {
+        io.stderr.write(`${error.message}\n`);
+      }
       return 1;
     }
 
@@ -392,6 +458,8 @@ async function runUpgradeProfileCommand(
     return 1;
   }
 
+  const { format } = parsedOptions.options;
+
   try {
     const model = await loadEffectiveHarnessModel(parsedOptions.options);
     const lockStatus = await resolveProfileLockStatus({
@@ -402,26 +470,48 @@ async function runUpgradeProfileCommand(
 
     await writeProfileLock(parsedOptions.options.projectDir, lockStatus.expected);
 
+    const profiles = lockStatus.expected.profiles;
+
     switch (lockStatus.kind) {
       case "missing":
-        io.stdout.write(
-          `created ${PROFILE_LOCK_FILE_PATH} for ${formatLockedProfiles(lockStatus.expected.profiles)}\n`,
-        );
+        if (format === "json") {
+          io.stdout.write(JSON.stringify({ action: "created", profiles }, null, 2) + "\n");
+        } else {
+          io.stdout.write(
+            `created ${PROFILE_LOCK_FILE_PATH} for ${formatLockedProfiles(lockStatus.expected.profiles)}\n`,
+          );
+        }
         return 0;
       case "match":
-        io.stdout.write(
-          `${PROFILE_LOCK_FILE_PATH} already pinned ${formatLockedProfiles(lockStatus.expected.profiles)}; rewrote the lock file.\n`,
-        );
+        if (format === "json") {
+          io.stdout.write(JSON.stringify({ action: "rewrote", profiles }, null, 2) + "\n");
+        } else {
+          io.stdout.write(
+            `${PROFILE_LOCK_FILE_PATH} already pinned ${formatLockedProfiles(lockStatus.expected.profiles)}; rewrote the lock file.\n`,
+          );
+        }
         return 0;
-      case "stale":
-        io.stdout.write(
-          `upgraded ${PROFILE_LOCK_FILE_PATH} from ${formatLockedProfiles(lockStatus.lock.profiles)} to ${formatLockedProfiles(lockStatus.expected.profiles)}\n`,
-        );
+      case "stale": {
+        if (format === "json") {
+          const previousProfiles = lockStatus.lock.profiles;
+          io.stdout.write(
+            JSON.stringify({ action: "upgraded", previousProfiles, profiles }, null, 2) + "\n",
+          );
+        } else {
+          io.stdout.write(
+            `upgraded ${PROFILE_LOCK_FILE_PATH} from ${formatLockedProfiles(lockStatus.lock.profiles)} to ${formatLockedProfiles(lockStatus.expected.profiles)}\n`,
+          );
+        }
         return 0;
+      }
     }
   } catch (error: unknown) {
     if (error instanceof HarnessConfigError || error instanceof ProfileLockError) {
-      io.stderr.write(`${error.message}\n`);
+      if (format === "json") {
+        io.stderr.write(formatErrorAsJson(error.message));
+      } else {
+        io.stderr.write(`${error.message}\n`);
+      }
       return 1;
     }
 
@@ -435,6 +525,40 @@ function formatLockedProfiles(
   return profiles.map((profile) => `${profile.name}@${profile.version}`).join(", ");
 }
 
+function formatErrorAsJson(message: string): string {
+  return JSON.stringify({ error: message }, null, 2) + "\n";
+}
+
+function formatDoctorReportAsJson(report: DoctorReport): string {
+  let profileLock: Record<string, unknown>;
+
+  if (report.profileLock.kind === "match") {
+    profileLock = { kind: "match", profiles: report.profileLock.lock.profiles };
+  } else if (report.profileLock.kind === "missing") {
+    profileLock = { expected: report.profileLock.expected.profiles, kind: "missing" };
+  } else {
+    profileLock = {
+      current: report.profileLock.lock.profiles,
+      expected: report.profileLock.expected.profiles,
+      kind: "stale",
+      reason: report.profileLock.reason,
+    };
+  }
+
+  return (
+    JSON.stringify(
+      {
+        capabilityWarnings: report.capabilityWarnings,
+        hasIssues: doctorReportHasIssues(report),
+        missingTools: report.missingTools,
+        profileLock,
+      },
+      null,
+      2,
+    ) + "\n"
+  );
+}
+
 function parseDirectoryOptions(
   args: string[],
   options: CliOptions,
@@ -442,10 +566,16 @@ function parseDirectoryOptions(
   const cwd = options.cwd ?? process.cwd();
   let projectDir = cwd;
   let profilesDir = options.profilesDir;
+  let format: OutputFormat = "text";
 
   for (let index = 0; index < args.length; index += 1) {
     const flag = args[index];
     const value = args[index + 1];
+
+    if (flag === "--json") {
+      format = "json";
+      continue;
+    }
 
     if (flag === "--project") {
       const optionValue = parseFlagValue("--project", value, "directory");
@@ -477,6 +607,7 @@ function parseDirectoryOptions(
 
   return {
     options: {
+      format,
       profilesDir,
       projectDir,
     },
@@ -649,6 +780,7 @@ function parseInitOptions(
     disabledTargets,
     dryRun,
     enabledTargets,
+    format: "text",
     languages,
     noRender,
     profileNames,
@@ -828,6 +960,7 @@ function parseRenderOptions(
 ): DirectoryOptionsResult<RenderOptions> {
   const cwd = options.cwd ?? process.cwd();
   let check = false;
+  let format: OutputFormat = "text";
   let projectDir = cwd;
   let profilesDir = options.profilesDir;
 
@@ -837,6 +970,11 @@ function parseRenderOptions(
 
     if (flag === "--check") {
       check = true;
+      continue;
+    }
+
+    if (flag === "--json") {
+      format = "json";
       continue;
     }
 
@@ -871,6 +1009,7 @@ function parseRenderOptions(
   return {
     options: {
       check,
+      format,
       profilesDir,
       projectDir,
     },
