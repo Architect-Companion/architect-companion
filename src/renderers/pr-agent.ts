@@ -69,14 +69,12 @@ export function renderPrAgentTarget(model: EffectiveHarnessModel): readonly stri
  * executes the review as its own CI step.
  */
 export function renderPrAgentConfig(model: EffectiveHarnessModel): string {
-  const rubric = buildReviewRubric(model);
-  if (rubric.includes("'''")) {
-    throw new Error(
-      "pr-agent: review rubric contains a TOML multiline-literal delimiter ('''); cannot render .pr_agent.toml.",
-    );
-  }
+  // Encode the rubric as a TOML multiline basic string. Escaping backslashes
+  // and double quotes keeps arbitrary profile text valid regardless of content
+  // (trailing quotes, embedded delimiters, and so on), so rendering never fails.
+  const escaped = buildReviewRubric(model).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 
-  return [generatedHeader, "[pr_reviewer]", "extra_instructions = '''", rubric, "'''", ""].join(
+  return [generatedHeader, "[pr_reviewer]", 'extra_instructions = """', escaped, '"""', ""].join(
     "\n",
   );
 }
@@ -98,10 +96,15 @@ export function renderPrAgentReviewWorkflow(_model: EffectiveHarnessModel): stri
     jobs: {
       "pr-architecture-review": {
         name: "PR architecture review (advisory)",
-        if: "${{ github.event.sender.type != 'Bot' }}",
+        // Run on pull-request events for any non-bot author, and on issue
+        // comments only when they are a PR command (e.g. /review) — otherwise
+        // every PR comment would needlessly start the job.
+        if: "${{ github.event.sender.type != 'Bot' && (github.event_name != 'issue_comment' || (github.event.issue.pull_request != null && startsWith(github.event.comment.body, '/'))) }}",
         "runs-on": "ubuntu-latest",
+        // Advisory review only: read the code, write PR/issue comments. It must
+        // not need contents: write (which would let a malicious PR push code).
         permissions: {
-          contents: "write",
+          contents: "read",
           issues: "write",
           "pull-requests": "write",
         },
