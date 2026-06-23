@@ -398,7 +398,9 @@ targets:
       const output = JSON.parse(second.writes.stdout) as unknown;
       expect(output).toMatchObject({ lockFile: { status: "fresh" } });
       expect(
-        (output as { results: { status: string }[] }).results.every((r) => r.status === "unchanged"),
+        (output as { results: { status: string }[] }).results.every(
+          (r) => r.status === "unchanged",
+        ),
       ).toBe(true);
     } finally {
       rmSync(projectDir, { force: true, recursive: true });

@@ -532,9 +532,7 @@ function formatErrorAsJson(message: string): string {
   return JSON.stringify({ error: message }, null, 2) + "\n";
 }
 
-function formatRenderResultEntry(
-  result: RenderResult,
-): Record<string, unknown> {
+function formatRenderResultEntry(result: RenderResult): Record<string, unknown> {
   const entry: Record<string, unknown> = {
     outputPath: result.outputPath,
     status: result.status,
@@ -556,13 +554,19 @@ function formatDoctorReportAsJson(report: DoctorReport): string {
     };
   } else if (report.profileLock.kind === "missing") {
     profileLock = {
-      expected: report.profileLock.expected.profiles.map(({ name, version }) => ({ name, version })),
+      expected: report.profileLock.expected.profiles.map(({ name, version }) => ({
+        name,
+        version,
+      })),
       kind: "missing",
     };
   } else {
     profileLock = {
       current: report.profileLock.lock.profiles.map(({ name, version }) => ({ name, version })),
-      expected: report.profileLock.expected.profiles.map(({ name, version }) => ({ name, version })),
+      expected: report.profileLock.expected.profiles.map(({ name, version }) => ({
+        name,
+        version,
+      })),
       kind: "stale",
       reason: report.profileLock.reason,
     };
