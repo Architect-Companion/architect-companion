@@ -353,6 +353,259 @@ targets:
     );
   });
 
+  it("render --json creates lock and outputs JSON with all results", async () => {
+    const { io, writes } = createIo();
+    const projectDir = copySampleProject();
+    const profilesDir = fileURLToPath(new URL("../profiles", import.meta.url));
+
+    try {
+      const exitCode = await runCli(
+        ["render", "--json", "--project", projectDir, "--profiles", profilesDir],
+        io,
+        options,
+      );
+
+      expect(exitCode).toBe(0);
+      expect(writes.stderr).toBe("");
+      const output = JSON.parse(writes.stdout) as unknown;
+      expect(output).toMatchObject({
+        lockFile: { status: "created" },
+        results: expect.arrayContaining([
+          expect.objectContaining({ status: "created", target: "agentsMd" }),
+        ]),
+      });
+      expect((output as { warnings: unknown[] }).warnings).toBeInstanceOf(Array);
+    } finally {
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+
+  it("render --json outputs fresh lockFile status on second run", async () => {
+    const { io } = createIo();
+    const projectDir = copySampleProject();
+    const profilesDir = fileURLToPath(new URL("../profiles", import.meta.url));
+
+    try {
+      await runCli(["render", "--project", projectDir, "--profiles", profilesDir], io, options);
+      const second = createIo();
+      const exitCode = await runCli(
+        ["render", "--json", "--project", projectDir, "--profiles", profilesDir],
+        second.io,
+        options,
+      );
+
+      expect(exitCode).toBe(0);
+      const output = JSON.parse(second.writes.stdout) as unknown;
+      expect(output).toMatchObject({ lockFile: { status: "fresh" } });
+      expect(
+        (output as { results: { status: string }[] }).results.every((r) => r.status === "unchanged"),
+      ).toBe(true);
+    } finally {
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+
+  it("render --check --json reports fresh:true when everything is up to date", async () => {
+    const { io } = createIo();
+    const projectDir = copySampleProject();
+    const profilesDir = fileURLToPath(new URL("../profiles", import.meta.url));
+
+    try {
+      await runCli(["render", "--project", projectDir, "--profiles", profilesDir], io, options);
+      const second = createIo();
+      const exitCode = await runCli(
+        ["render", "--check", "--json", "--project", projectDir, "--profiles", profilesDir],
+        second.io,
+        options,
+      );
+
+      expect(exitCode).toBe(0);
+      expect(second.writes.stderr).toBe("");
+      expect(JSON.parse(second.writes.stdout)).toMatchObject({
+        fresh: true,
+        lockFile: { status: "fresh" },
+        results: [],
+      });
+    } finally {
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+
+  it("render --check --json reports fresh:false with stale results when targets are missing", async () => {
+    const { io, writes } = createIo();
+    const projectDir = copySampleProject();
+    const profilesDir = fileURLToPath(new URL("../profiles", import.meta.url));
+
+    try {
+      const exitCode = await runCli(
+        ["render", "--check", "--json", "--project", projectDir, "--profiles", profilesDir],
+        io,
+        options,
+      );
+
+      expect(exitCode).toBe(1);
+      expect(writes.stderr).toBe("");
+      const output = JSON.parse(writes.stdout) as unknown;
+      expect(output).toMatchObject({
+        fresh: false,
+        lockFile: { status: "stale" },
+      });
+      expect(
+        (output as { results: { status: string }[] }).results.every((r) => r.status === "stale"),
+      ).toBe(true);
+    } finally {
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+
+  it("render --json writes error JSON to stderr when profile lock is stale", async () => {
+    const { io, writes } = createIo();
+    const projectDir = copySampleProject();
+    const profilesDir = fileURLToPath(new URL("../profiles", import.meta.url));
+
+    try {
+      writeFileSync(
+        join(projectDir, ".architect-companion/profile.lock.yml"),
+        `schemaVersion: 1
+profiles:
+  - name: modular-monolith
+    version: 0.2.0
+    contentHash: sha256-0000000000000000000000000000000000000000000000000000000000000000
+  - name: typescript
+    version: 0.1.0
+    contentHash: sha256-0000000000000000000000000000000000000000000000000000000000000000
+`,
+      );
+
+      const exitCode = await runCli(
+        ["render", "--json", "--project", projectDir, "--profiles", profilesDir],
+        io,
+        options,
+      );
+
+      expect(exitCode).toBe(1);
+      expect(writes.stdout).toBe("");
+      const error = JSON.parse(writes.stderr) as unknown;
+      expect(error).toMatchObject({ error: expect.stringContaining("upgrade-profile") });
+    } finally {
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+
+  it("doctor --json outputs structured report with hasIssues:false when healthy", async () => {
+    const { io } = createIo();
+    const projectDir = copySampleProject();
+    const profilesDir = fileURLToPath(new URL("../profiles", import.meta.url));
+
+    try {
+      await runCli(
+        ["upgrade-profile", "--project", projectDir, "--profiles", profilesDir],
+        io,
+        options,
+      );
+      const doctorIo = createIo();
+      const exitCode = await runCli(
+        ["doctor", "--json", "--project", projectDir, "--profiles", profilesDir],
+        doctorIo.io,
+        options,
+      );
+
+      expect(exitCode).toBe(0);
+      expect(doctorIo.writes.stderr).toBe("");
+      const output = JSON.parse(doctorIo.writes.stdout) as unknown;
+      expect(output).toMatchObject({
+        capabilityWarnings: expect.any(Array),
+        hasIssues: false,
+        missingTools: [],
+        profileLock: { kind: "match" },
+      });
+    } finally {
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+
+  it("doctor --json outputs hasIssues:true and profileLock.kind:missing when lock is absent", async () => {
+    const { io, writes } = createIo();
+    const projectDir = copySampleProject();
+    const profilesDir = fileURLToPath(new URL("../profiles", import.meta.url));
+
+    try {
+      const exitCode = await runCli(
+        ["doctor", "--json", "--project", projectDir, "--profiles", profilesDir],
+        io,
+        options,
+      );
+
+      expect(exitCode).toBe(0);
+      expect(writes.stderr).toBe("");
+      const output = JSON.parse(writes.stdout) as unknown;
+      expect(output).toMatchObject({
+        hasIssues: false,
+        profileLock: { kind: "missing" },
+      });
+    } finally {
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+
+  it("upgrade-profile --json outputs action:created when lock is missing", async () => {
+    const { io, writes } = createIo();
+    const projectDir = copySampleProject();
+    const profilesDir = fileURLToPath(new URL("../profiles", import.meta.url));
+
+    try {
+      const exitCode = await runCli(
+        ["upgrade-profile", "--json", "--project", projectDir, "--profiles", profilesDir],
+        io,
+        options,
+      );
+
+      expect(exitCode).toBe(0);
+      expect(writes.stderr).toBe("");
+      expect(JSON.parse(writes.stdout)).toMatchObject({
+        action: "created",
+        profiles: expect.arrayContaining([expect.objectContaining({ name: "modular-monolith" })]),
+      });
+    } finally {
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+
+  it("upgrade-profile --json outputs action:rewrote when lock already matches", async () => {
+    const { io } = createIo();
+    const projectDir = copySampleProject();
+    const profilesDir = fileURLToPath(new URL("../profiles", import.meta.url));
+
+    try {
+      await runCli(
+        ["upgrade-profile", "--project", projectDir, "--profiles", profilesDir],
+        io,
+        options,
+      );
+      const second = createIo();
+      const exitCode = await runCli(
+        ["upgrade-profile", "--json", "--project", projectDir, "--profiles", profilesDir],
+        second.io,
+        options,
+      );
+
+      expect(exitCode).toBe(0);
+      expect(JSON.parse(second.writes.stdout)).toMatchObject({ action: "rewrote" });
+    } finally {
+      rmSync(projectDir, { force: true, recursive: true });
+    }
+  });
+
+  it("init --json fails with unknown argument error", async () => {
+    const { io, writes } = createIo();
+
+    const exitCode = await runCli(["init", "--json"], io, options);
+
+    expect(exitCode).toBe(1);
+    expect(writes.stdout).toBe("");
+    expect(writes.stderr).toContain("Unknown argument: --json");
+  });
+
   it("detects direct execution through a package manager symlink", () => {
     const cliPath = fileURLToPath(new URL("../src/cli.ts", import.meta.url));
     const tempDir = mkdtempSync(join(tmpdir(), "architect-companion-"));
