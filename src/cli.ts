@@ -30,7 +30,7 @@ import {
   resolveProfileLockStatus,
   writeProfileLock,
 } from "./model/profile-lock.js";
-import { renderEffectiveHarnessModel, RenderError, type RenderResult } from "./render/render.js";
+import { renderEffectiveHarnessModel, RenderError } from "./render/render.js";
 
 export const HELP_TEXT = `Architect Companion
 
