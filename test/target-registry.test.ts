@@ -11,6 +11,7 @@ describe("target registry", () => {
       "cursor",
       "dependencyCruiser",
       "githubActions",
+      "prAgent",
     ]);
   });
 });

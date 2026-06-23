@@ -17,3 +17,4 @@ targets:
   cursor: true
   dependencyCruiser: false
   githubActions: true
+  prAgent: true
