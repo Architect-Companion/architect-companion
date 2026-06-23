@@ -12,6 +12,7 @@ describe("target registry", () => {
       "dependencyCruiser",
       "githubActions",
       "prAgent",
+      "claudeHooks",
     ]);
   });
 });

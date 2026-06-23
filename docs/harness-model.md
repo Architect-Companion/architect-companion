@@ -94,7 +94,17 @@ CLAUDE.md
 .cursor/rules/architect-companion.mdc
 .dependency-cruiser.cjs
 .github/workflows/architecture.yml
+.pr_agent.toml
+.github/workflows/pr-agent-review.yml
+.claude/settings.json
+.claude/hooks/guard-generated-files.mjs
 ```
+
+The Claude Code hooks target is the first feedforward adapter: rather than only
+describing rules for the agent to read, it renders a `PreToolUse` hook that
+Claude Code executes inside its own agent loop to block edits to generated files
+before they happen. Architect Companion renders the configuration and the guard
+script; Claude Code runs them.
 
 Future render targets may include:
 
@@ -102,7 +112,6 @@ Future render targets may include:
 .github/copilot-instructions.md
 .codex/config.toml
 .codex/hooks.json
-.claude/settings.json
 .claude/commands/*.md
 ```
 

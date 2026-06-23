@@ -10,7 +10,8 @@ It provides reusable instructions, workflows, architecture metadata, and checks 
 
 ## What It Provides Today
 
-- Deterministic renderers for `AGENTS.md`, `CLAUDE.md`, Cursor rules, `.dependency-cruiser.cjs`, and `.github/workflows/architecture.yml`.
+- Deterministic renderers for `AGENTS.md`, `CLAUDE.md`, Cursor rules, `.dependency-cruiser.cjs`, `.github/workflows/architecture.yml`, the PR-Agent review config, and Claude Code hooks (`.claude/settings.json`).
+- A feedforward safety guard: the Claude Code hooks target renders a PreToolUse hook that blocks the agent from hand-editing files Architect Companion generates, before the edit happens rather than after it drifts.
 - A harness model that composes reusable profiles with project languages, boundary metadata, allowed dependencies, and target selection.
 - Reusable profile content: principles, policies, workflows, review heuristics, examples, and policy implementation metadata.
 - Executable verification through `architect-companion render --check` plus rendered dependency-cruiser and GitHub Actions integration.

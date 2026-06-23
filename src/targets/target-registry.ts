@@ -42,6 +42,14 @@ export const targetRegistry = [
       { outputPath: ".github/workflows/pr-agent-review.yml" },
     ],
   },
+  {
+    key: "claudeHooks",
+    label: "Claude Code hooks",
+    outputs: [
+      { outputPath: ".claude/settings.json" },
+      { outputPath: ".claude/hooks/guard-generated-files.mjs" },
+    ],
+  },
 ] as const satisfies readonly TargetMetadata[];
 
 export type KnownTargetKey = (typeof targetRegistry)[number]["key"];
