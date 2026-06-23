@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Architect Companion: an architecture harness for AI coding agents</title>
+    <meta
+      name="description"
+      content="Architect Companion packages architectural knowledge as reusable profiles, then renders your harness into the configuration your AI coding tools read: CLAUDE.md, AGENTS.md, Cursor rules, dependency-cruiser, CI, and PR review."
+    />
+    <meta name="theme-color" content="#faf8f4" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="apple-touch-icon" href="favicon.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Architect Companion" />
+    <meta
+      property="og:description"
+      content="Expert architecture knowledge, built into every AI coding agent. An open source harness by embarc."
+    />
+    <meta property="og:image" content="logo.png" />
+    <meta name="twitter:card" content="summary" />
+
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+
+  <body>
+    <div class="brand-rule" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <div class="bar">
+        <a class="wordmark" href="./" aria-label="Architect Companion home">
+          <img src="logo.png" alt="" width="41" height="26" />
+          <span>Architect Companion</span>
+        </a>
+        <nav class="nav-links" aria-label="Primary">
+          <a href="https://github.com/Architect-Companion/architect-companion/tree/main/docs"
+            >Docs</a
+          >
+          <a
+            href="https://github.com/Architect-Companion/architect-companion/blob/main/docs/product-thesis.md"
+            >Thesis</a
+          >
+          <a class="ghost" href="https://github.com/Architect-Companion/architect-companion"
+            >GitHub</a
+          >
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Architecture harness for AI coding agents</p>
+          <h1>Expert architecture knowledge, built into every AI coding agent.</h1>
+          <p class="lede">
+            Architect Companion packages the practices that experienced software architects rely on
+            as reusable profiles. Pick the profiles that fit your project, compose them into one
+            harness, and render that knowledge straight into the configuration your AI coding tools
+            read. The standards reach every tool automatically, instead of being pasted in by hand.
+          </p>
+          <div class="actions">
+            <a class="btn" href="#start">Get started</a>
+            <a class="btn-text" href="https://github.com/Architect-Companion/architect-companion">
+              View on GitHub
+              <span aria-hidden="true">&#8599;</span>
+            </a>
+          </div>
+          <p class="hero-by">
+            An open source project by
+            <a href="https://www.embarc.de/" aria-label="embarc"
+              ><img class="embarc-inline" src="embarc-logo.svg" alt="embarc" width="75" height="20"
+            /></a>
+          </p>
+          <p class="meta-note">
+            Open source under the MIT license. Requires Node.js 22.13 or newer.
+          </p>
+        </div>
+
+        <div class="hero-demo" aria-hidden="false">
+          <div class="terminal">
+            <div class="terminal-head">
+              <span class="tdot"></span>
+              <span class="tlabel">architect-companion</span>
+            </div>
+            <pre class="terminal-body"><code><span class="prompt">$</span> architect-companion init
+
+<span class="prompt">profiles applied</span>
+  cli         <span class="prompt">layered command-line architecture</span>
+  typescript  <span class="prompt">typed boundary contracts</span>
+
+<span class="prompt">rendered 7 targets</span>
+  <span class="ok">+</span> AGENTS.md
+  <span class="ok">+</span> CLAUDE.md
+  <span class="ok">+</span> .cursor/rules/architect-companion.mdc
+  <span class="ok">+</span> .dependency-cruiser.cjs
+  <span class="ok">+</span> .github/workflows/architecture.yml
+  <span class="ok">+</span> .pr_agent.toml
+  <span class="ok">+</span> .claude/settings.json</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="band" id="profiles">
+        <div class="two-col">
+          <p class="col-label">Profiles</p>
+          <div class="col-body">
+            <p>
+              Architect Companion ships with profiles, and each one captures architectural knowledge
+              from embarc's software architecture practice: the principles, policies, workflows,
+              review heuristics, and worked examples for a particular kind of system. This is the
+              knowledge experienced architects bring to a project, written down once and kept
+              reusable.
+            </p>
+            <p>
+              Pick the profiles that match what you are building, then compose them with your own
+              project. You get a harness shaped to your setup, not a blank configuration file you
+              have to fill in yourself.
+            </p>
+            <dl class="ledger">
+              <div class="row">
+                <dt>cli</dt>
+                <dd>Layered command line applications with a thin adapter at the edge.</dd>
+              </div>
+              <div class="row">
+                <dt>typescript</dt>
+                <dd>Typed boundary contracts and stable public entrypoints.</dd>
+              </div>
+              <div class="row">
+                <dt>modular-monolith</dt>
+                <dd>Clear module boundaries inside a single deployable.</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      </section>
+
+      <section class="band">
+        <div class="two-col">
+          <p class="col-label">Why</p>
+          <div class="col-body">
+            <p>
+              AI coding tools each read their own configuration. CLAUDE.md, AGENTS.md, Cursor rules,
+              and the rest fall out of sync the moment someone edits one by hand. The boundaries you
+              agreed on in one file quietly contradict the next.
+            </p>
+            <p>
+              Architect Companion keeps a single source of architectural truth and renders the rest
+              from it, so the same boundaries and policies reach every tool. It does not run reviews
+              or write code. It configures the tools that do.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="band" id="targets">
+        <div class="two-col">
+          <p class="col-label">What it renders</p>
+          <div class="col-body">
+            <dl class="ledger">
+              <div class="row">
+                <dt>AGENTS.md</dt>
+                <dd>Instructions for AI agents working in the repository.</dd>
+              </div>
+              <div class="row">
+                <dt>CLAUDE.md</dt>
+                <dd>Project instructions for Claude Code.</dd>
+              </div>
+              <div class="row">
+                <dt>.cursor/rules/architect-companion.mdc</dt>
+                <dd>Rules read by Cursor.</dd>
+              </div>
+              <div class="row">
+                <dt>.dependency-cruiser.cjs</dt>
+                <dd>Dependency boundary checks you can run locally and in CI.</dd>
+              </div>
+              <div class="row">
+                <dt>.github/workflows/architecture.yml</dt>
+                <dd>An architecture check that runs on pull requests.</dd>
+              </div>
+              <div class="row">
+                <dt>.pr_agent.toml</dt>
+                <dd>Review configuration for PR-Agent.</dd>
+              </div>
+              <div class="row">
+                <dt>.claude/settings.json</dt>
+                <dd>Claude Code hooks that stop generated files from being hand-edited.</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      </section>
+
+      <section class="band grid-bg" id="how">
+        <div class="two-col">
+          <p class="col-label">How it works</p>
+          <div class="col-body">
+            <p>
+              One harness file names the profiles that supply the knowledge, your project languages,
+              the architectural boundaries, and which targets to render. Everything else is
+              generated from it.
+            </p>
+
+            <div class="flow">
+              <figure class="flow-source">
+                <figcaption>.architect-companion/harness.yml</figcaption>
+                <pre><code>schemaVersion: 1
+profiles:
+  - name: cli
+    version: 0.1.0
+  - name: typescript
+    version: 0.1.0
+project:
+  name: architect-companion
+  languages:
+    - typescript
+boundaries: architecture/boundaries.yml
+targets:
+  agentsMd: true
+  claudeMd: true
+  cursor: true
+  dependencyCruiser: true
+  githubActions: true
+  prAgent: true
+  claudeHooks: true</code></pre>
+              </figure>
+
+              <div class="flow-arrow" aria-hidden="true">
+                <span class="run">architect-companion render</span>
+                <span class="arrow">&#8595;</span>
+              </div>
+
+              <ul class="flow-targets" aria-label="Generated files">
+                <li>AGENTS.md</li>
+                <li>CLAUDE.md</li>
+                <li>.cursor/rules/architect-companion.mdc</li>
+                <li>.dependency-cruiser.cjs</li>
+                <li>.github/workflows/architecture.yml</li>
+                <li>.pr_agent.toml</li>
+                <li>.claude/settings.json</li>
+              </ul>
+            </div>
+
+            <p class="commands-intro">The tool exposes a handful of commands.</p>
+            <dl class="ledger compact">
+              <div class="row">
+                <dt>init</dt>
+                <dd>Scaffold the harness and render the enabled targets.</dd>
+              </div>
+              <div class="row">
+                <dt>render</dt>
+                <dd>Generate every target file from the resolved model.</dd>
+              </div>
+              <div class="row">
+                <dt>render --check</dt>
+                <dd>Re-render and fail if any committed file has drifted.</dd>
+              </div>
+              <div class="row">
+                <dt>doctor</dt>
+                <dd>Diagnose missing tools, warnings, and profile lock status.</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      </section>
+
+      <section class="band" id="ci">
+        <div class="two-col">
+          <p class="col-label">Verify in CI</p>
+          <div class="col-body">
+            <p>
+              <code class="inline">render --check</code> re-renders every target and compares it to
+              what is committed. Wire it into your pipeline and a pull request cannot merge with
+              stale configuration.
+            </p>
+            <pre
+              class="block"
+            ><code><span class="prompt">$</span> architect-companion render --check
+Generated targets are fresh.</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="band" id="start">
+        <div class="two-col">
+          <p class="col-label">Get started</p>
+          <div class="col-body">
+            <p>The project is not on npm yet. Clone it, build it, and run the CLI from the repo.</p>
+            <pre
+              class="block"
+            ><code><span class="prompt">$</span> git clone https://github.com/Architect-Companion/architect-companion
+<span class="prompt">$</span> cd architect-companion
+<span class="prompt">$</span> npm ci
+<span class="prompt">$</span> npm run build
+<span class="prompt">$</span> node dist/cli.js --help</code></pre>
+            <p>
+              Then run <code class="inline">init</code> inside a project to scaffold the harness,
+              and <code class="inline">render</code> whenever the model changes. The
+              <a href="https://github.com/Architect-Companion/architect-companion/tree/main/docs"
+                >documentation</a
+              >
+              covers the harness model, profiles, and the boundary between deterministic checks and
+              AI-assisted review.
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="foot-inner">
+        <div class="foot-brand">
+          <img src="logo.png" alt="" width="35" height="22" />
+          <span>Architect Companion</span>
+        </div>
+        <nav class="foot-links" aria-label="Footer">
+          <a href="https://github.com/Architect-Companion/architect-companion">GitHub</a>
+          <a href="https://github.com/Architect-Companion/architect-companion/tree/main/docs"
+            >Docs</a
+          >
+          <a href="https://github.com/Architect-Companion/architect-companion/blob/main/LICENSE"
+            >MIT License</a
+          >
+        </nav>
+      </div>
+
+      <div class="foot-maker">
+        Built and maintained by
+        <a href="https://www.embarc.de/" aria-label="embarc, software architecture consultancy"
+          ><img class="embarc-logo" src="embarc-logo.svg" alt="embarc" width="79" height="21"
+        /></a>
+      </div>
+
+      <p class="foot-note">
+        embarc is a software architecture consultancy. Architect Companion is open source under the
+        MIT license.
+      </p>
+    </footer>
+  </body>
+</html>
